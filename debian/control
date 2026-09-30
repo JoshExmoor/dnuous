@@ -15,8 +15,8 @@ Description: Audio file metadata lister
  Dnuos is a console program that creates lists of music collections, based on
  directory structure.
  .
- It supports MP3, AAC, Musepack, Ogg Vorbis, and FLAC audio files. Quality
- profile detection is also supported, including LAME quality preset
+ It supports MP3, AAC, Musepack, Ogg Vorbis, Opus, and FLAC audio files.
+ Quality profile detection is also supported, including LAME quality preset
  information.
  .
  Homepage: http://bitheap.org/dnuos/

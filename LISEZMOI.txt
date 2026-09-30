@@ -22,7 +22,7 @@ Par exemple, une liste pourrait ressembler à ceci :
 Le format de la liste est complètement personnalisable. On peut générer du
 texte brut ou du code HTML.
 
-Dnuos supporte les formats MP3, AAC, Musepack, Ogg Vorbis, et FLAC. Une
+Dnuos supporte les formats MP3, AAC, Musepack, Ogg Vorbis, Opus, et FLAC. Une
 détection des profils de qualité est effectuée, notamment par les informations
 du [LAME quality preset][].
 
@@ -55,8 +55,8 @@ Lancez `dnuos --help` pour des informations détaillées sur toutes les options.
 
 Extrayez l'archive et exécutez `setup.py` pour l'installer :
 
-    tar zxvf dnuos-1.0.11.tar.gz
-    cd dnuos-1.0.11
+    tar zxvf dnuos-1.0.12.tar.gz
+    cd dnuos-1.0.12
     sudo python setup.py install
 
 Cela installera un script nommé `dnuos` dans `/usr/local/bin`.
@@ -99,6 +99,10 @@ des interfaces graphiques suivantes :
 
 Quoi de neuf
 ------------
+
+### Version 1.0.12 (30 sep. 2026)
+
+* Ajouté le support des fichiers audio Opus.
 
 ### Version 1.0.11 (18 jui. 2010)
 

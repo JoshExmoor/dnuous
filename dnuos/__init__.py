@@ -1,6 +1,6 @@
 """Script for gathering information about directories of audio files"""
 
-__version__ = '1.0.11'
+__version__ = '1.0.12'
 
 import os
 import sys
@@ -29,6 +29,7 @@ class Data(object):
             "Total": 0.0,
             "FLAC": 0.0,
             "Ogg": 0.0,
+            "Opus": 0.0,
             "MP3": 0.0,
             "MPC": 0.0,
             "AAC": 0.0,

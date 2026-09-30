@@ -32,8 +32,8 @@ For example, a list might look like this:
 
 The list format is completely customizable and can be plain text or HTML.
 
-Dnuos supports MP3, AAC, Musepack, Ogg Vorbis, and FLAC audio files. Quality
-profile detection is also supported, including LAME quality preset
+Dnuos supports MP3, AAC, Musepack, Ogg Vorbis, Opus, and FLAC audio files.
+Quality profile detection is also supported, including LAME quality preset
 information (see L<http://wiki.hydrogenaudio.org/index.php?title=Lame#Recommended_encoder_settings>).
 
 Audio file information is saved to disk after a list is made for the first

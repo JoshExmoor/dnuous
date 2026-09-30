@@ -21,8 +21,8 @@ For example, a list might look like this:
 
 The list format is completely customizable and can be plain text or HTML.
 
-Dnuos supports MP3, AAC, Musepack, Ogg Vorbis, and FLAC audio files. Quality
-profile detection is also supported, including [LAME quality preset][]
+Dnuos supports MP3, AAC, Musepack, Ogg Vorbis, Opus, and FLAC audio files.
+Quality profile detection is also supported, including [LAME quality preset][]
 information.
 
 Audio file information is saved to disk after a list is made for the first
@@ -52,8 +52,8 @@ Run `dnuos --help` for a full rundown of the available options.
 
 Extract the archive and run `setup.py` to install it:
 
-    tar zxvf dnuos-1.0.11.tar.gz
-    cd dnuos-1.0.11
+    tar zxvf dnuos-1.0.12.tar.gz
+    cd dnuos-1.0.12
     sudo python setup.py install
 
 This will install a console script named `dnuos` into `/usr/local/bin`.
@@ -94,6 +94,10 @@ the following graphical front-ends instead:
 
 News
 ----
+
+### Version 1.0.12 (Sep. 30, 2026)
+
+* Added support for Opus audio files.
 
 ### Version 1.0.11 (Jul. 18, 2010)
 

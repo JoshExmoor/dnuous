@@ -114,7 +114,7 @@ setup(
     ],
     cmdclass={'build_mo': build_mo, 'test': test},
     description='A tool for creating lists of music collections',
-    download_url='http://bitheap.org/dnuos/files/dnuos-1.0.11.tar.gz',
+    download_url='http://bitheap.org/dnuos/files/dnuos-1.0.12.tar.gz',
     keywords='music collection list metadata mp3 audiolist oidua',
     license='GNU GPL',
     long_description="""
@@ -138,8 +138,8 @@ For example, a list might look like this::
 
 The list format is completely customizable and can be plain text or HTML.
 
-Dnuos supports MP3, AAC, Musepack, Ogg Vorbis, and FLAC audio files. Quality
-profile detection is also supported, including `LAME quality preset`_
+Dnuos supports MP3, AAC, Musepack, Ogg Vorbis, Opus, and FLAC audio files.
+Quality profile detection is also supported, including `LAME quality preset`_
 information.
 
 Audio file information is saved to disk after a list is made for the first
@@ -158,6 +158,6 @@ older, has fewer features, and is no longer maintained.
     package_data=package_data,
     scripts=['scripts/dnuos'],
     url='http://bitheap.org/dnuos/',
-    version='1.0.11',
+    version='1.0.12',
     **extra_options
 )

@@ -17,7 +17,8 @@ from dnuos.misc import dir_depth
 class Dir(object):
     """Holds audio metadata about a directory"""
 
-    valid_types = ['mp3', 'mpc', 'mp+', 'm4a', 'ogg', 'flac', 'fla', 'flc']
+    valid_types = ['mp3', 'mpc', 'mp+', 'm4a', 'ogg', 'opus', 'flac', 'fla',
+                   'flc']
 
     # Note: The order of these values is significant as only a list of
     # attribute values is pickled to the database.

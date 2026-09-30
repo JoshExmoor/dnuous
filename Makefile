@@ -8,6 +8,8 @@ all: build
 
 build:
 	$(PYTHON) setup.py build
+exe:
+	$(PYTHON) setup.py py2exe
 clean:
 	$(PYTHON) setup.py clean --all
 	find . -name '*.py[co]' -exec rm -f "{}" ';'

@@ -275,6 +275,164 @@ class Ogg(AudioType):
             return {}
 
 
+class Opus(AudioType):
+
+    # Opus audio is always coded at a 48 kHz timebase, regardless of the
+    # original input sample rate. Granule positions in the Ogg stream are
+    # therefore expressed in 48 kHz samples.
+    granule_freq = 48000
+
+    filetype = "Opus"
+
+    def __init__(self, file_):
+
+        AudioType.__init__(self, file_)
+
+        # OpusHead identification header:
+        # 0 version
+        # 1 channel count
+        # 2 pre-skip (48 kHz samples)
+        # 3 original input sample rate (informational)
+        # 4 output gain
+        # 5 channel mapping family
+        self.header = self.getheader()
+        self.version = self.header[0]
+        self.channels = self.header[1]
+        self._preskip = self.header[2]
+        self.freq = self.header[3] or self.granule_freq
+
+        self._artist = None
+        self._album = None
+        self._year = None
+
+        self.comment = self.getcomment()
+        for i in self.comment:
+            if '=' not in i:
+                continue
+            field, value = i.split('=', 1)
+            field = field.lower()
+            if field == "artist":
+                self._artist = value
+            elif field == "album":
+                self._album = value
+            elif field == "date":
+                self._year = value
+
+        # The final granule position is the total number of decodable
+        # 48 kHz samples. Subtract the pre-skip to get the real length.
+        last = self.lastgranule()
+        granule = last[-1] if last else 0
+        samples = max(granule - self._preskip, 0)
+        self.time = float(samples) / self.granule_freq
+        self.brtype = "V"
+
+    def artist(self):
+
+        return {'vorbis': self._artist}
+
+    def album(self):
+
+        return {'vorbis': self._album}
+
+    def year(self):
+
+        return {'vorbis': self._year}
+
+    def profile(self):
+
+        return {}
+
+    def getheader(self):
+
+        # Locate the OpusHead identification header and unpack its fields.
+        syncpattern = 'OpusHead'
+        overlap = len(syncpattern) - 1
+        # version(B) channels(B) preskip(H) input rate(I) gain(h) family(B)
+        headerformat = '<BBHIhB'
+        headersize = struct.calcsize(headerformat)
+
+        self._f.seek(0)
+        start = self._f.tell()
+        chunk = self._f.read(1024 + overlap)
+
+        while len(chunk) > overlap:
+            sync = chunk.find(syncpattern)
+            if sync != -1:
+                self._f.seek(start + sync + len(syncpattern))
+                return struct.unpack(headerformat,
+                                     self._f.read(headersize))
+            start += 1024
+            self._f.seek(start + overlap)
+            chunk = chunk[-overlap:] + self._f.read(1024)
+        raise SpacerError("No OpusHead header found")
+
+    def getcomment(self):
+
+        # Locate the OpusTags header. It shares the Vorbis comment layout:
+        # a vendor string followed by a list of "FIELD=value" comments.
+        syncpattern = 'OpusTags'
+        overlap = len(syncpattern) - 1
+        lenformat = "<I"
+        lensize = struct.calcsize(lenformat)
+
+        self._f.seek(0)
+        start = self._f.tell()
+        chunk = self._f.read(1024 + overlap)
+
+        while len(chunk) > overlap:
+            sync = chunk.find(syncpattern)
+            if sync != -1:
+                self._f.seek(start + sync + len(syncpattern))
+                vendor_length = struct.unpack(lenformat,
+                                    self._f.read(lensize))[0]
+                format = "<%ds" % vendor_length
+                self.vendor = struct.unpack(format,
+                                  self._f.read(struct.calcsize(format)))[0]
+                listlength = struct.unpack(lenformat,
+                                 self._f.read(lensize))[0]
+                comments = []
+                for i in xrange(listlength):
+                    commentlength = struct.unpack(lenformat,
+                                        self._f.read(lensize))[0]
+                    format = "<%ds" % commentlength
+                    comments.append(struct.unpack(format,
+                                    self._f.read(struct.calcsize(format)))[0])
+                return comments
+            start += 1024
+            self._f.seek(start + overlap)
+            chunk = chunk[-overlap:] + self._f.read(1024)
+        return []
+
+    def lastgranule(self):
+
+        # Scan backwards for the last Ogg page and read its granule position.
+        syncpattern = 'OggS'
+        overlap = len(syncpattern) - 1
+        # capture pattern(4s), skip version+header type(2x), granule(q)
+        headerformat = '<4s2xq'
+        headersize = struct.calcsize(headerformat)
+
+        result = None
+        # Start from the end, but never seek before the start of the file
+        # (files smaller than the block size would otherwise fail).
+        start = max(self.filesize - 1024, 0)
+        self._f.seek(start)
+        chunk = self._f.read(1024)
+
+        while len(chunk) > overlap:
+            sync = chunk.rfind(syncpattern)
+            if sync != -1:
+                self._f.seek(start + sync)
+                return struct.unpack(headerformat,
+                                     self._f.read(headersize))
+            if start == 0:
+                break
+            start = max(start - 1024, 0)
+            self._f.seek(start)
+            chunk = self._f.read(1024) + chunk[:overlap]
+        return result
+
+
 class MP3(AudioType):
 
     filetype = "MP3"
@@ -1013,6 +1171,8 @@ def openstream(filename):
         return MPC(filename)
     elif lowername.endswith(".ogg"):
         return Ogg(filename)
+    elif lowername.endswith(".opus"):
+        return Opus(filename)
     elif (lowername.endswith(".flac") or lowername.endswith('.fla') or
           lowername.endswith('.flc')):
         return FLAC(filename)
