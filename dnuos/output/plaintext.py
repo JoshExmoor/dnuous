@@ -68,7 +68,7 @@ class Renderer(AbstractRenderer):
         yield line
         yield _('| Format    Amount (Mb) | Ratio (%) |')
         yield line
-        for mediatype in ["Ogg", "MP3", "MPC", "AAC", "FLAC"]:
+        for mediatype in ["Ogg", "Opus", "MP3", "MPC", "AAC", "FLAC"]:
             if sizes[mediatype]:
                 amount = locale.format(_('%12.2f'),
                     sizes[mediatype] / (1024 * 1024))
