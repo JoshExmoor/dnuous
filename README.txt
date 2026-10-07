@@ -75,6 +75,7 @@ dialog. Type *cmd* and press enter to start the command prompt. Then type the
 drive letter the `.exe` is on, and `cd` to the directory with the `.exe`
 file. From here, simply run `dnuos.exe`.
 
+**Windows files are located in the /dist directory and are all you need to run the program in Windows**
 
 ### Graphical Front-ends
 
