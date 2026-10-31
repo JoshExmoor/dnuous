@@ -40,7 +40,7 @@ older, has fewer features, and is no longer maintained.
 Download
 --------
 
-Releases can be found in <http://bitheap.org/dnuos/files/>.
+The source is available at <https://github.com/JoshExmoor/dnuous>.
 
 
 Installation/Usage
@@ -50,10 +50,10 @@ Run `dnuos --help` for a full rundown of the available options.
 
 Dnuos requires Python 3.8 or newer.
 
-Extract the archive and install it with pip:
+Get the source and install it with pip:
 
-    tar zxvf dnuos-1.0.12.tar.gz
-    cd dnuos-1.0.12
+    git clone https://github.com/JoshExmoor/dnuous.git
+    cd dnuous
     python3 -m pip install .
 
 This installs a console script named `dnuos` (`dnuos.exe` on Windows) into
@@ -62,8 +62,6 @@ the console script using `python3 -m dnuos`.
 
 Once installed, open up your favorite terminal emulator (or PowerShell on
 Windows) and run `dnuos`.
-
-**Windows files are located in the /dist directory and are all you need to run the program in Windows**
 
 ### Standalone Windows executable
 
@@ -94,11 +92,16 @@ the following graphical front-ends instead:
 News
 ----
 
-### Unreleased
+### Version 2.0.0 (unreleased)
 
 * Ported to Python 3 (3.8+). Python 2 is no longer supported.
 * The cache format changed; existing caches are discarded and rebuilt on the
   first run.
+* Added `build_exe.py` for building a standalone Windows executable. This
+  replaces the old py2exe build.
+* Fixed directories being rescanned on every run after they changed.
+* Fixed AAC files being read in full, which made some directories slow.
+* Fixed the progress counter appearing to jump backwards.
 * Fixed the `dnuos` script always exiting with status 0.
 * Fixed audio files being left open after they were scanned.
 
@@ -216,28 +219,27 @@ News
 Development
 -----------
 
-Download the official development repository using [Mercurial][]:
+Clone the development repository using Git:
 
-    hg clone http://bitbucket.org/brodie/dnuos
+    git clone https://github.com/JoshExmoor/dnuous.git
 
-Running the test suite requires the [test data][] (in the `testdata`
-directory next to `runtests.py`). Once you have it, you can run the tests
-with the following command:
+The test data is included in `dnuostests/testdata`. Run the test suite with:
 
     python3 runtests.py
 
-Visit [Bitbucket][] if you'd like to fork the project, watch for new changes,
-or report issues.
+A `testdata` directory next to `runtests.py`, if present, is used instead.
 
-[Mercurial]: http://www.selenic.com/mercurial/
-[test data]: http://bitheap.org/files/testdata.zip
-[Bitbucket]: http://bitbucket.org/brodie/dnuos
+Visit the [GitHub repository][] if you'd like to fork the project, watch for
+new changes, or report issues.
+
+[GitHub repository]: https://github.com/JoshExmoor/dnuous
 
 
 Contact
 -------
 
-* [Brodie Rao](http://brodierao.com/) - Project maintainer
+* [JoshExmoor](https://github.com/JoshExmoor) - Maintainer of this fork
+* [Brodie Rao](http://brodierao.com/) - Original author and maintainer
 
 ### Past Contributors
 

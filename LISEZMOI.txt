@@ -42,8 +42,7 @@ maintenu.
 Télécharger
 -----------
 
-Les différentes versions peuvent être téléchargées sur
-<http://bitheap.org/dnuos/files/>.
+Le code source est disponible sur <https://github.com/JoshExmoor/dnuous>.
 
 
 Installation / Utilisation
@@ -51,34 +50,31 @@ Installation / Utilisation
 
 Lancez `dnuos --help` pour des informations détaillées sur toutes les options.
 
-### Linux, Mac OS X, Unix
+Dnuos nécessite Python 3.8 ou une version plus récente.
 
-Extrayez l'archive et exécutez `setup.py` pour l'installer :
+Récupérez le code source et installez-le avec pip :
 
-    tar zxvf dnuos-1.0.12.tar.gz
-    cd dnuos-1.0.12
-    sudo python setup.py install
+    git clone https://github.com/JoshExmoor/dnuous.git
+    cd dnuous
+    python3 -m pip install .
 
-Cela installera un script nommé `dnuos` dans `/usr/local/bin`.
-(Sous Mac OS X 10.4 et les anciennes versions, il peut être placé dans
-`/Library/Frameworks/Python.framework/Versions/Current/bin`.)
+Cela installe un script nommé `dnuos` (`dnuos.exe` sous Windows) dans le
+dossier des scripts de votre environnement Python. Vous pouvez aussi lancer
+Dnuos sans ce script avec `python3 -m dnuos`.
 
-Après l'installation, ouvrez votre terminal préféré et exécutez `dnuos`.
-Sur Mac OS X, *Terminal* serait un bon choix (situé dans
-`/Applications/Utilities`).
+Après l'installation, ouvrez votre terminal préféré (ou PowerShell sous
+Windows) et exécutez `dnuos`.
 
 
-### Windows
+### Exécutable Windows autonome
 
-Il n'y a pas d'installation à proprement parler. Extrayez simplement le
-fichier zip à l'endroit où vous souhaitez l'installer. Vous pouvez exécuter
-l'application avec la commande `dnuos.exe`.
+Pour construire un `dnuos.exe` qui fonctionne sans Python :
 
-Pour ce faire, après avoir extrait Dnuos, appuyez simultanément sur les
-touches Windows et R pour ouvrir la fenêtre *Commande*. Tapez *cmd* et
-appuyez sur enter pour lancer la ligne de commande. Ensuite, tapez la lettre
-du disque dur où l'exécutable est placé et `cd [le dossier]` pour aller au bon
-emplacement. Une fois rendu dans le bon dossier, exécutez `dnuos.exe`.
+    python -m pip install pyinstaller==6.11.1
+    python build_exe.py
+
+L'exécutable est créé dans `dist\py3\dnuos.exe`. L'option `--onedir` crée
+plutôt un dossier, qui démarre plus vite.
 
 
 ### Interfaces graphiques
@@ -99,6 +95,20 @@ des interfaces graphiques suivantes :
 
 Quoi de neuf
 ------------
+
+### Version 2.0.0 (pas encore publiée)
+
+* Porté vers Python 3 (3.8+). Python 2 n'est plus pris en charge.
+* Le format du cache a changé ; les caches existants sont supprimés et
+  reconstruits lors de la première exécution.
+* Ajouté `build_exe.py` pour construire un exécutable Windows autonome, qui
+  remplace l'ancienne version py2exe.
+* Corrigé les répertoires modifiés qui étaient analysés à chaque exécution.
+* Corrigé la lecture complète des fichiers AAC, qui ralentissait certains
+  répertoires.
+* Corrigé le compteur de progression qui semblait reculer.
+* Corrigé le script `dnuos` qui se terminait toujours avec le code 0.
+* Corrigé les fichiers audio laissés ouverts après leur analyse.
 
 ### Version 1.0.12 (30 sep. 2026)
 
@@ -220,30 +230,29 @@ Quoi de neuf
 Développement
 -------------
 
-Le dépôt officiel de développement est situé à
-<http://bitheap.org/hg/dnuos>. Avec [Mercurial][], exécutez :
+Clonez le dépôt de développement avec Git :
 
-    hg clone http://bitheap.org/hg/dnuos/
+    git clone https://github.com/JoshExmoor/dnuous.git
 
-Exécuter les tests unitaires nécessite d'avoir les [données de test][] (dans
-le même dossier que `setup.py`). Une fois que vous les avez récupérée, vous
-pouvez exécuter les tests avec la commande suivante :
+Les données de test sont incluses dans `dnuostests/testdata`. Exécutez les
+tests avec la commande suivante :
 
-    python setup.py test
+    python3 runtests.py
 
-Si vous recontrez un problème, faites un rapport de bogue sur le [site Trac][].
-Ce site est destiné au développement et non pas à l'assistance, donc n'y
-soumettez pas de demande d'aide.
+Un dossier `testdata` à côté de `runtests.py`, s'il existe, est utilisé à la
+place.
 
-[Mercurial]: http://www.selenic.com/mercurial/
-[données de test]: http://bitheap.org/dnuos/files/testdata.zip
-[site Trac]: http://bitheap.org/dnuos/trac/
+Si vous rencontrez un problème, signalez-le sur le [dépôt GitHub][].
+
+[dépôt GitHub]: https://github.com/JoshExmoor/dnuous
 
 
 Contacter
 ---------
 
-* [Brodie Rao](mailto:me+dnuos à dackz point net) - Mainteneur du projet
+* [JoshExmoor](https://github.com/JoshExmoor) - Mainteneur de ce fork
+* [Brodie Rao](mailto:me+dnuos à dackz point net) - Auteur et mainteneur
+  d'origine
 
 ### Contributeurs retirés
 

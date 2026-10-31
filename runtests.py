@@ -6,7 +6,7 @@ Usage: python runtests.py [--data-dir DIR]
 Runs every doctest in the dnuos package (unit tests) and the dnuostests
 package (functional tests that compare dnuos output against expected
 listings). The functional tests need the test data directory, which
-defaults to ./testdata.
+defaults to ./testdata, falling back to dnuostests/testdata.
 """
 
 import argparse
@@ -51,9 +51,13 @@ def testpkg(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('-d', '--data-dir',
-                        default=os.path.join(HERE, 'testdata'),
-                        help='path to test data [default: ./testdata]')
+    # A local ./testdata takes precedence; otherwise use the tracked copy
+    default_data = os.path.join(HERE, 'testdata')
+    if not os.path.isdir(default_data):
+        default_data = os.path.join(HERE, 'dnuostests', 'testdata')
+    parser.add_argument('-d', '--data-dir', default=default_data,
+                        help='path to test data [default: ./testdata if '
+                             'present, else dnuostests/testdata]')
     args = parser.parse_args()
     os.environ['DATA_DIR'] = os.path.abspath(args.data_dir)
     sys.path.insert(0, HERE)

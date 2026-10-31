@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dnuos"
-version = "1.0.12"
+version = "2.0.0"
 description = "A tool for creating lists of music collections"
 readme = { file = "README.txt", content-type = "text/markdown" }
 requires-python = ">=3.8"
@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "http://bitheap.org/dnuos/"
+Homepage = "https://github.com/JoshExmoor/dnuous"
 
 [project.scripts]
 dnuos = "dnuos:cli"

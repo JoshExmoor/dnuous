@@ -1,0 +1,14 @@
+# Python bytecode
+__pycache__/
+*.py[co]
+
+# Build output
+/build/
+/dist/
+*.egg-info/
+
+# Compiled translations (built from the .po files)
+*.mo
+
+# Local test data (the tracked copy lives in dnuostests/testdata)
+/testdata/
