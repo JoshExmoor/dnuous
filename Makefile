@@ -4,6 +4,8 @@ all: build
 
 build:
 	$(PYTHON) -m pip wheel --no-deps -w dist .
+exe:
+	$(PYTHON) build_exe.py
 test:
 	$(PYTHON) runtests.py
 clean:

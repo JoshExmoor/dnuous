@@ -1,4 +1,4 @@
-include Makefile msgfmt.py runtests.py pyproject.toml *.txt scripts/*
+include Makefile msgfmt.py runtests.py build_exe.py pyproject.toml *.txt scripts/*
 recursive-include dnuos/locale *.po *.pot
 recursive-exclude dnuos/locale *.mo
 recursive-include dnuostests *.py

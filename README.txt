@@ -65,6 +65,16 @@ Windows) and run `dnuos`.
 
 **Windows files are located in the /dist directory and are all you need to run the program in Windows**
 
+### Standalone Windows executable
+
+To build a `dnuos.exe` that runs without Python installed:
+
+    python -m pip install pyinstaller==6.11.1
+    python build_exe.py
+
+The executable is written to `dist\py3\dnuos.exe`. Pass `--onedir` for a
+folder build, which starts faster.
+
 ### Graphical Front-ends
 
 If terminals and command prompts aren't to your liking, you can try one of
