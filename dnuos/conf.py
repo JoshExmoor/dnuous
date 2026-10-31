@@ -7,18 +7,13 @@ import sys
 import optparse
 from optparse import OptionGroup, OptionParser, OptionValueError
 
-try:
-    set
-except NameError:
-    from sets import Set as set
-
 import dnuos.path
 import dnuos.output
 import dnuos.output.db
 import dnuos.output.html
 import dnuos.output.plaintext
 from dnuos import appdata
-from dnuos.misc import deprecation, natcmp, _
+from dnuos.misc import deprecation, natcmp, sort_with, _
 
 optparse._ = _
 
@@ -36,7 +31,7 @@ def get_terminal_width():
     width = 0
     try:
         width = _ioctl_width(sys.stdout.fileno())
-    except (AttributeError, ImportError, IOError):
+    except (AttributeError, ImportError, OSError, ValueError):
         pass
     if not width:
         try:
@@ -49,14 +44,14 @@ def get_terminal_width():
 def print_help(option, opt_str, value, parser):
     """Prints help and exits program"""
 
-    print parser.format_help()
+    print(parser.format_help())
     sys.exit()
 
 
 def exit_with_output_help(option, opt_str, value, parser):
     """Prints output help and exits program"""
 
-    print _(r"""
+    print(_(r"""
 Anything enclosed by brackets is considered a field. A field must have the
 following syntax:
   [TAG]
@@ -108,7 +103,7 @@ Unescaped brackets are forbidden unless they define a field.
 
 Note: If you have any whitespace in your output string you must put it inside
 quotes or otherwise it will not get parsed right.
-""")
+"""))
     sys.exit()
 
 
@@ -444,22 +439,20 @@ def parse_args(argv=sys.argv):
     if not options.basedirs and not (options.cull_cache or
         options.delete_cache):
         if options.disp_version:
-            print ''.join(dnuos.output.plaintext.render_version(
-                dnuos.__version__))
+            print(''.join(dnuos.output.plaintext.render_version(
+                dnuos.__version__)))
             sys.exit()
-        print >> sys.stderr, (_("No folders to process.\nType `%s -h' "
-                                "for help.") % os.path.basename(argv[0]))
+        print((_("No folders to process.\nType `%s -h' "
+                                "for help.") % os.path.basename(argv[0])), file=sys.stderr)
         sys.exit(2)
 
     for basedir in options.basedirs:
         if not dnuos.path.exists(basedir):
-            print >> sys.stderr, _('No such file or directory: %s') % basedir
+            print(_('No such file or directory: %s') % basedir, file=sys.stderr)
             sys.exit(2)
 
     # options overriding eachother
-    if options.debug or (not options.outfile and
-                         isinstance(sys.stdout, file) and
-                         sys.stdout.isatty()):
+    if options.debug or (not options.outfile and _isatty(sys.stdout)):
         options.show_progress = False
     if options.output_module == dnuos.output.db:
         options.list_bad = False
@@ -467,12 +460,21 @@ def parse_args(argv=sys.argv):
     return options
 
 
+def _isatty(stream):
+    """True if stream is a real terminal"""
+
+    try:
+        return stream.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
 def expand(options, dir_):
     """translate a basedir to a list of absolute paths"""
 
-    if options.wildcards and re.search("[*?]|(?:\[.*\])", dir_):
+    if options.wildcards and re.search(r"[*?]|(?:\[.*\])", dir_):
         dirs = glob.glob(dir_)
-        dirs.sort(options.sort_cmp)
+        sort_with(dirs, options.sort_cmp)
         return [os.path.abspath(d) for d in dirs]
     else:
         return [os.path.abspath(dir_)]

@@ -1,70 +1,32 @@
-"""UTF-8 drop-in replacements for various os.path functions.
+"""Thin aliases for the os/os.path functions Dnuos uses.
 
-Dnuos has always assumed UTF-8 as the file system encoding, but this isn't
-always the case, especially on Windows. These functions take UTF-8 strings,
-decode them to unicode objects, and pass them to the underlying os.path
-functions. Any functions that return paths with unicode objects are
-encoded back into UTF-8 strings.
-
-This has the effect that UTF-8 can be used even if the file system uses
-a different encoding, due to decoding to unicode beforehand.
+Under Python 2, Dnuos represented every path as a UTF-8 encoded byte string
+and these functions decoded/encoded around the real os calls. Python 3 uses
+str paths natively (with surrogateescape for undecodable names on POSIX), so
+these are now plain aliases kept for API compatibility within the package.
 """
 
+import builtins
 import os
-import sys
 
-def listdir(path):
-
-    try:
-        path = path.decode('utf-8')
-    except UnicodeError:
-        # Try to emulate the behavior of os.listdir(u'...') if the path isn't
-        # valid for the FS encoding. There's nothing we can do on Windows as
-        # os.listdir uses non-wchar APIs for strs.
-        if sys.platform == 'win32':
-            raise
-
-        fsenc = sys.getfilesystemencoding().lower()
-        paths = []
-        for p in os.listdir(path):
-            try:
-                paths.append(p.decode(fsenc).encode('utf-8'))
-            except UnicodeError:
-                paths.append(p)
-        return paths
-
-    paths = []
-    for p in os.listdir(path):
-        # Don't encode paths that aren't Unicode. os.listdir will return str
-        # objects for any paths it couldn't decode to unicode objects (see
-        # http://bugs.python.org/issue683592).
-        if isinstance(p, unicode):
-            paths.append(p.encode('utf-8'))
-        else:
-            paths.append(p)
-    return paths
+listdir = os.listdir
+exists = os.path.exists
+expanduser = os.path.expanduser
 
 
-def _wrap(func):
+def getmtime(path):
+    """Integer mtime (Python 2 Dnuos used os.stat_float_times(False))"""
 
-    def wrapper(path, *args, **kw):
-        try:
-            return func(path.decode('utf-8'), *args, **kw)
-        except UnicodeError:
-            return func(path, *args, **kw)
-    return wrapper
+    return int(os.path.getmtime(path))
 
 
-exists = _wrap(os.path.exists)
-expanduser = _wrap(os.path.expanduser)
-getmtime = _wrap(os.path.getmtime)
-getsize = _wrap(os.path.getsize)
-isdir = _wrap(os.path.isdir)
-isfile = _wrap(os.path.isfile)
-mkdir = _wrap(os.mkdir)
-makedirs = _wrap(os.makedirs)
-normpath = _wrap(os.path.normpath)
-rename = _wrap(os.rename)
-remove = _wrap(os.remove)
-rmdir = _wrap(os.rmdir)
-open = _wrap(open)
+getsize = os.path.getsize
+isdir = os.path.isdir
+isfile = os.path.isfile
+mkdir = os.mkdir
+makedirs = os.makedirs
+normpath = os.path.normpath
+rename = os.rename
+remove = os.remove
+rmdir = os.rmdir
+open = builtins.open

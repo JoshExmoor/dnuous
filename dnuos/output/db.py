@@ -12,12 +12,20 @@ Example outout:
 
 from dnuos.output.abstract_renderer import AbstractRenderer, Column
 
+# Encoding used when writing output.db to a file
+OUTPUT_ENCODING = 'latin-1'
+
 class DBColumn(Column):
 
     def __init__(self, *args, **kwargs):
 
         super(DBColumn, self).__init__(*args, **kwargs)
-        self._encoding = ('latin1', 'replace')
+
+    def _textencode(self, str_):
+        """output.db is latin-1; replace characters it can't represent"""
+
+        str_ = super(DBColumn, self)._textencode(str_)
+        return str_.encode('latin-1', 'replace').decode('latin-1')
 
 class Renderer(AbstractRenderer):
 

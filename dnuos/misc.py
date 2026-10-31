@@ -11,17 +11,36 @@ Feel free to organize this in a better way if you know how. I don't.
 import locale
 import os
 import re
+from functools import cmp_to_key, total_ordering
 from heapq import heappop, heappush
 from itertools import count
 from warnings import warn
 
+def cmp(a, b):
+    """Python 2 style three-way comparison"""
+
+    return (a > b) - (a < b)
+
+
+def sort_with(seq, sort_cmp):
+    """Sort a list in place using a three-way comparison function"""
+
+    seq.sort(key=cmp_to_key(sort_cmp))
+
+
 def _find_locale_dir():
 
     # Avoid unpacking the egg if translation isn't necessary
-    try:
-        lang = locale.getdefaultlocale()[0]
-    except ValueError:
-        return None
+    lang = None
+    for var in ('LC_ALL', 'LC_MESSAGES', 'LANG', 'LANGUAGE'):
+        if os.environ.get(var):
+            lang = os.environ[var].split(':')[0]
+            break
+    if not lang:
+        try:
+            lang = locale.getlocale()[0]
+        except ValueError:
+            return None
     if not lang or lang.split('_', 1)[0] == 'en':
         return None
 
@@ -57,6 +76,7 @@ def natcmp(a, b):
 
     return locale.strcoll(_natkey(a), _natkey(b))
 
+@total_ordering
 class Lookahead(object):
     """Wrapper class for adding one element of lookahead to an iterator.
     Requires iterables of strings or sequences of strings.
@@ -66,26 +86,26 @@ class Lookahead(object):
     >>> x = Lookahead(iter(('0', '1', '2')))
     >>> x.lookahead
     '0'
-    >>> x.next()
+    >>> next(x)
     '0'
     >>> x.lookahead
     '1'
-    >>> x.next()
+    >>> next(x)
     '1'
     >>> x.lookahead
     '2'
     >>> y = Lookahead(iter(('1', '2', '3')))
-    >>> y.next()
+    >>> next(y)
     '1'
     >>> x == y
     True
-    >>> y.next()
+    >>> next(y)
     '2'
     >>> x <= y
     True
     >>> x.empty
     False
-    >>> x.next()
+    >>> next(x)
     '2'
     >>> x.empty
     True
@@ -93,33 +113,39 @@ class Lookahead(object):
 
     __slots__ = ['iterator', 'sort_cmp', 'lookahead', 'empty']
 
-    def __init__(self, iterator, sort_cmp=cmp):
+    def __init__(self, iterator, sort_cmp=None):
 
         self.iterator = iterator
-        self.sort_cmp = sort_cmp
+        self.sort_cmp = sort_cmp or cmp
         self.lookahead = None
         self.empty = False
-        self.next()
+        next(self)
 
     def __iter__(self):
 
         return self
 
-    def next(self):
+    def __next__(self):
         """Get next value"""
 
         result = self.lookahead
         try:
-            self.lookahead = self.iterator.next()
+            self.lookahead = next(self.iterator)
         except StopIteration:
             self.lookahead = None
             self.empty = True
         return result
 
-    def __cmp__(self, other):
-        """Compare iterator heads (as opposed to the entire iterators)"""
+    # Compare iterator heads (as opposed to the entire iterators)
+    def __eq__(self, other):
 
-        return self.sort_cmp(self.lookahead, other.lookahead)
+        return self.sort_cmp(self.lookahead, other.lookahead) == 0
+
+    def __lt__(self, other):
+
+        return self.sort_cmp(self.lookahead, other.lookahead) < 0
+
+    __hash__ = object.__hash__
 
 
 def deprecation(message):
@@ -192,7 +218,7 @@ def is_subdir(path1, path2):
     return path2 == path1[:len(path2)]
 
 
-def merge(iterators, sort_cmp=cmp):
+def merge(iterators, sort_cmp=None):
     """Merge n ordered iterators into one ordered iterator.
 
     Merge two ordered iterators
@@ -221,7 +247,7 @@ def merge(iterators, sort_cmp=cmp):
     # elements, and thus the next element in the ordered merged iteration.
     while heap:
         iterator, index = heappop(heap)
-        yield iterator.next()
+        yield next(iterator)
         if not iterator.empty:
             heappush(heap, (iterator, index))
 
@@ -249,9 +275,9 @@ def to_human(value, radix=1024.0):
         i += 1
     suffix = " kMG"[i]
     if value > 100:
-        value = locale.format('%d', value)
+        value = locale.format_string('%d', value)
     elif value < 10:
-        value = locale.format('%.2f', value)
+        value = locale.format_string('%.2f', value)
     else:
-        value = locale.format('%.1f', value)
+        value = locale.format_string('%.1f', value)
     return "%s%s" % (value, suffix)

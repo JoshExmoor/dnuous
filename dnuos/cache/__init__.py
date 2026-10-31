@@ -1,9 +1,6 @@
 """A module for caching"""
 
-try:
-    from dnuos.cache.sqlitecache import Cache
-except ImportError:
-    from dnuos.cache.shelvecache import Cache
+from dnuos.cache.sqlitecache import Cache
 
 
 def memoized(func, cache):
@@ -17,7 +14,7 @@ def memoized(func, cache):
     Example usage and behavior:
 
     >>> def fake_dir(path):
-    ...     print 'fake_dir()'
+    ...     print('fake_dir()')
     ...     return '[dir data]'
     ...
     >>> cache = {'/old/dir': '[old dir data]'}
@@ -37,8 +34,11 @@ def memoized(func, cache):
         try:
             return cache[key]
         except KeyError:
-            value = func(key)
-            cache[key] = value
-            return value
+            pass
+        # Evaluate outside the except block so exceptions raised (and
+        # recorded) by func aren't chained to the cache miss KeyError.
+        value = func(key)
+        cache[key] = value
+        return value
 
     return wrapper

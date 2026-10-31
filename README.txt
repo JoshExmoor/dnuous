@@ -48,32 +48,20 @@ Installation/Usage
 
 Run `dnuos --help` for a full rundown of the available options.
 
-### Linux, Mac OS X, Unix
+Dnuos requires Python 3.8 or newer.
 
-Extract the archive and run `setup.py` to install it:
+Extract the archive and install it with pip:
 
     tar zxvf dnuos-1.0.12.tar.gz
     cd dnuos-1.0.12
-    sudo python setup.py install
+    python3 -m pip install .
 
-This will install a console script named `dnuos` into `/usr/local/bin`.
-(On Mac OS X 10.4 and earlier, it may get installed into
-`/Library/Frameworks/Python.framework/Versions/Current/bin`.)
+This installs a console script named `dnuos` (`dnuos.exe` on Windows) into
+your Python environment's scripts directory. You can also run Dnuos without
+the console script using `python3 -m dnuos`.
 
-Once installed, open up your favorite terminal emulator and run `dnuos`. On
-Mac OS X, *Terminal* might be a good choice (located in
-`/Applications/Utilities/`).
-
-
-### Windows
-
-There's no installation. Just extract the zip file where you want to install
-it. You can run the program in the command prompt with `dnuos.exe`.
-
-After extracting Dnuos, press the Windows key and R to bring up the *Run*
-dialog. Type *cmd* and press enter to start the command prompt. Then type the
-drive letter the `.exe` is on, and `cd` to the directory with the `.exe`
-file. From here, simply run `dnuos.exe`.
+Once installed, open up your favorite terminal emulator (or PowerShell on
+Windows) and run `dnuos`.
 
 **Windows files are located in the /dist directory and are all you need to run the program in Windows**
 
@@ -95,6 +83,14 @@ the following graphical front-ends instead:
 
 News
 ----
+
+### Unreleased
+
+* Ported to Python 3 (3.8+). Python 2 is no longer supported.
+* The cache format changed; existing caches are discarded and rebuilt on the
+  first run.
+* Fixed the `dnuos` script always exiting with status 0.
+* Fixed audio files being left open after they were scanned.
 
 ### Version 1.0.12 (Sep. 30, 2026)
 
@@ -214,11 +210,11 @@ Download the official development repository using [Mercurial][]:
 
     hg clone http://bitbucket.org/brodie/dnuos
 
-Running the test suite requires the [test data][] (in the same directory as
-`setup.py`). Once you have it, you can run the tests with the following
-command:
+Running the test suite requires the [test data][] (in the `testdata`
+directory next to `runtests.py`). Once you have it, you can run the tests
+with the following command:
 
-    python setup.py test
+    python3 runtests.py
 
 Visit [Bitbucket][] if you'd like to fork the project, watch for new changes,
 or report issues.

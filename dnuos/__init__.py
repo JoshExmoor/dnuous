@@ -6,7 +6,7 @@ import os
 import sys
 import time
 import warnings
-from itertools import chain, ifilter
+from itertools import chain
 
 import dnuos.output.db
 import dnuos.path
@@ -14,7 +14,7 @@ from dnuos import appdata, audiodir
 from dnuos.cache import Cache, memoized
 from dnuos.conf import parse_args
 from dnuos.misc import dir_depth, equal_elements, formatwarning
-from dnuos.misc import merge, to_human, _
+from dnuos.misc import merge, sort_with, to_human, _
 from dnuos.output.db import DBColumn
 
 __all__ = ['main']
@@ -76,22 +76,22 @@ def prepare_listing(dir_pairs, options, data):
         dir_pairs = print_bad(dir_pairs)
     elif options.list_bad:
         dir_pairs = collect_bad(dir_pairs, data.bad_files)
-    dir_pairs = ifilter(non_empty, dir_pairs)
+    dir_pairs = filter(non_empty, dir_pairs)
     if options.no_mixed:
-        dir_pairs = ifilter(no_mixed, dir_pairs)
+        dir_pairs = filter(no_mixed, dir_pairs)
     if options.no_cbr:
-        dir_pairs = ifilter(no_cbr_mp3, dir_pairs)
+        dir_pairs = filter(no_cbr_mp3, dir_pairs)
     if options.no_non_profile:
-        dir_pairs = ifilter(profile_only_mp3, dir_pairs)
+        dir_pairs = filter(profile_only_mp3, dir_pairs)
     if options.mp3_min_bit_rate != 0:
-        dir_pairs = ifilter(enough_bitrate_mp3(options.mp3_min_bit_rate),
+        dir_pairs = filter(enough_bitrate_mp3(options.mp3_min_bit_rate),
                             dir_pairs)
     if options.mp3_max_bit_rate != 0:
-        dir_pairs = ifilter(to_little_bitrate_mp3(options.mp3_max_bit_rate),
+        dir_pairs = filter(to_little_bitrate_mp3(options.mp3_max_bit_rate),
                             dir_pairs)
     if options.output_module == dnuos.output.db:
         output_db_predicate = make_output_db_predicate(options)
-        dir_pairs = ifilter(output_db_predicate, dir_pairs)
+        dir_pairs = filter(output_db_predicate, dir_pairs)
     if not options.output_module == dnuos.output.db:
         dir_pairs = total_sizes(dir_pairs, data.size)
     if (not options.stripped and
@@ -118,62 +118,17 @@ def setup_renderer(output_module, format_string, fields, options):
     return renderer
 
 
-def _win32_utf8_argv():
-    """Uses shell32.GetCommandLineArgvW to get sys.argv as a list of UTF-8
-    strings.
-
-    Versions 2.5 and older of Python don't support Unicode in sys.argv on
-    Windows, with the underlying Windows API instead replacing multi-byte
-    characters with '?'.
-
-    Returns None on failure.
-    """
-
-    try:
-        from ctypes import POINTER, byref, cdll, c_int, windll
-        from ctypes.wintypes import LPCWSTR, LPWSTR
-
-        GetCommandLineW = cdll.kernel32.GetCommandLineW
-        GetCommandLineW.argtypes = []
-        GetCommandLineW.restype = LPCWSTR
-
-        CommandLineToArgvW = windll.shell32.CommandLineToArgvW
-        CommandLineToArgvW.argtypes = [LPCWSTR, POINTER(c_int)]
-        CommandLineToArgvW.restype = POINTER(LPWSTR)
-
-        cmd = GetCommandLineW()
-        argc = c_int(0)
-        argv = CommandLineToArgvW(cmd, byref(argc))
-        if argc.value > 0:
-            # Remove Python executable if present
-            if argc.value - len(sys.argv) == 1:
-                start = 1
-            else:
-                start = 0
-            return [argv[i].encode('utf-8') for i in
-                    xrange(start, argc.value)]
-    except Exception:
-        pass
-
-
 def main(argv=None, locale=''):
     """Main entry point"""
 
-    # Wrap stdout with a codec that goes from UTF-8 to the preferred encoding
-    encoding = getattr(sys.stdout, 'encoding', None)
-    if encoding and encoding.lower() != 'utf-8':
-        from codecs import getwriter
+    # Replace characters the terminal can't encode with question marks
+    # instead of crashing.
+    reconfigure = getattr(sys.stdout, 'reconfigure', None)
+    if reconfigure is not None:
         try:
-            cls = getwriter(sys.stdout.encoding)
-        except LookupError:
+            reconfigure(errors='replace')
+        except (TypeError, ValueError):
             pass
-        else:
-            class StdoutWrapper(cls):
-                def write(self, obj):
-                    if isinstance(obj, str):
-                        obj = obj.decode('utf-8')
-                    cls.write(self, obj)
-            sys.stdout = StdoutWrapper(sys.stdout, 'replace')
 
     import locale as locale_
     try:
@@ -182,13 +137,12 @@ def main(argv=None, locale=''):
         pass
 
     if argv is None:
-        argv = _win32_utf8_argv() or sys.argv
+        argv = sys.argv
 
-    os.stat_float_times(False)
     warnings.formatwarning = formatwarning
     try:
         options = parse_args(argv)
-    except SystemExit, e:
+    except SystemExit as e:
         return e.code
     data = Data(options.unknown_types)
     audiodir.Dir.valid_types.extend(options.unknown_types or ())
@@ -197,10 +151,10 @@ def main(argv=None, locale=''):
         import shutil
         try:
             shutil.rmtree(options.cache_dir)
-        except OSError, err:
-            print >> sys.stderr, _('Failed to delete cache: %s') % err
+        except OSError as err:
+            print(_('Failed to delete cache: %s') % err, file=sys.stderr)
             return 2
-        print _('Removed cache directory %s') % options.cache_dir
+        print(_('Removed cache directory %s') % options.cache_dir)
         return 0
 
     adir_class = audiodir.Dir
@@ -211,26 +165,27 @@ def main(argv=None, locale=''):
                                 options.cache_dir))
             if options.cull_cache:
                 culled = cache.cull()
-                print _('Culled %d non-existent directories') % culled
+                cache.save()
+                print(_('Culled %d non-existent directories') % culled)
                 return 0
             adir_class = memoized(audiodir.Dir, cache)
-        except (ImportError, IOError), err:
+        except (ImportError, IOError) as err:
             options.use_cache = False
-            print >> sys.stderr, _('Failed to create cache directory:')
+            print(_('Failed to create cache directory:'), file=sys.stderr)
             if options.debug:
                 raise
-            print >> sys.stderr, err
-            print >> sys.stderr, _('Use the --disable-cache switch to '
-                                   'disable caching')
+            print(err, file=sys.stderr)
+            print(_('Use the --disable-cache switch to '
+                                   'disable caching'), file=sys.stderr)
 
     try:
         renderer = setup_renderer(options.output_module,
                                   options.format_string, options.fields,
                                   options)
     except KeyError:
-        print >> sys.stderr, _('Format string can only contain valid fields')
-        print >> sys.stderr, _('Use the --help-output-string switch for more '
-                               'information')
+        print(_('Format string can only contain valid fields'), file=sys.stderr)
+        print(_('Use the --help-output-string switch for more '
+                               'information'), file=sys.stderr)
         return 2
 
     # Append basedirs to exclude_paths to avoid traversing nested
@@ -242,24 +197,40 @@ def main(argv=None, locale=''):
     result = renderer.render(adirs, options, data)
 
     # Output
-    outfile = (options.outfile and dnuos.path.open(options.outfile, 'w')
+    encoding = getattr(options.output_module, 'OUTPUT_ENCODING', 'utf-8')
+    outfile = (options.outfile and
+               dnuos.path.open(options.outfile, 'w', encoding=encoding,
+                               errors='replace')
                or sys.stdout)
     try:
         for chunk in result:
-            print >> outfile, chunk
+            print(chunk, file=outfile)
     finally:
+        if outfile is not sys.stdout:
+            outfile.close()
         # Store updated cache
         if options.basedirs and options.use_cache:
             try:
                 cache.save()
-            except IOError, err:
-                print >> sys.stderr, _('Failed to save cache data:')
+            except IOError as err:
+                print(_('Failed to save cache data:'), file=sys.stderr)
                 if options.debug:
                     raise
-                print >> sys.stderr, err
-                print >> sys.stderr, _('Use the --disable-cache switch to '
-                                       'disable caching')
+                print(err, file=sys.stderr)
+                print(_('Use the --disable-cache switch to '
+                                       'disable caching'), file=sys.stderr)
                 return 2
+
+
+def cli():
+    """Console script entry point. Returns the process exit status."""
+
+    try:
+        return main()
+    except KeyboardInterrupt:
+        if '--debug' in sys.argv:
+            raise
+        return 130
 
 
 def indicate_progress(dir_pairs, sizes, outs=sys.stderr):
@@ -271,9 +242,9 @@ def indicate_progress(dir_pairs, sizes, outs=sys.stderr):
     """
 
     for adir, root in dir_pairs:
-        print >> outs, _('%sB processed\r') % to_human(sizes["Total"]),
+        print(_('%sB processed\r') % to_human(sizes["Total"]), end='', file=outs)
         yield adir, root
-    print >> outs, "\r               \r",
+    print("\r               \r", end='', file=outs)
 
 
 def print_bad(dir_pairs):
@@ -287,8 +258,8 @@ def print_bad(dir_pairs):
     for adir, root in dir_pairs:
         yield adir, root
         for badfile, traceback in adir.bad_files:
-            print >> sys.stderr, _('Audiotype failed for:'), badfile
-            print >> sys.stderr, traceback
+            print(_('Audiotype failed for:'), badfile, file=sys.stderr)
+            print(traceback, file=sys.stderr)
 
 
 def collect_bad(dir_pairs, bad_files):
@@ -304,33 +275,31 @@ def collect_bad(dir_pairs, bad_files):
         bad_files.extend(adir.bad_files)
 
 
-def non_empty((adir, root)):
+def non_empty(adir_root):
     """Empty directory predicate.
 
     Directories are considered empty if they contain no recognized audio files.
     """
-
+    (adir, root) = adir_root
     return adir.num_files > len(adir.bad_files)
 
 
-def no_mixed((adir, root)):
+def no_mixed(adir_root):
     """No mixed audio directories predicate"""
-
+    (adir, root) = adir_root
     return (adir.mediatype != 'Mixed' and adir.brtype != '~' and
             len(adir.bad_files) == 0)
 
 
-def no_cbr_mp3((adir, root)):
+def no_cbr_mp3(adir_root):
     """No CBR MP3 files predicate"""
-
-    # This implementation does not consider CBR MP3s in Mixed directories
+    (adir, root) = adir_root
     return adir.mediatype != "MP3" or adir.brtype not in "C~"
 
 
-def profile_only_mp3((adir, root)):
+def profile_only_mp3(adir_root):
     """No non-profile MP3 predicate"""
-
-    # This implementation does not consider non-profile MP3s in Mixed dirs
+    (adir, root) = adir_root
     return adir.mediatype != "MP3" or adir.profile != ""
 
 
@@ -338,15 +307,15 @@ def enough_bitrate_mp3(mp3_min_bit_rate):
     """Create low-bitrate MP3 predicate"""
 
     # This implementation does not consider low-bitrate MP3s in Mixed dirs
-    return lambda (adir, root): (adir.mediatype != "MP3" or
-                                 adir.bitrate >= mp3_min_bit_rate)
+    return lambda adir_root: (adir_root[0].mediatype != "MP3" or
+                                 adir_root[0].bitrate >= mp3_min_bit_rate)
 
 def to_little_bitrate_mp3(mp3_max_bit_rate):
     """Create max-bitrate MP3 predicate"""
 
     # This implementation does not consider low-bitrate MP3s in Mixed dirs
-    return lambda (adir, root): (adir.mediatype != "MP3" or
-                                 adir.bitrate <= mp3_max_bit_rate)
+    return lambda adir_root1: (adir_root1[0].mediatype != "MP3" or
+                                 adir_root1[0].bitrate <= mp3_max_bit_rate)
 
 
 def make_output_db_predicate(options):
@@ -355,7 +324,8 @@ def make_output_db_predicate(options):
     artist_column = DBColumn("A", None, None, options)
     album_column = DBColumn("C", None, None, options)
 
-    def output_db_predicate((adir, root)):
+    def output_db_predicate(adir_root):
+        (adir, root) = adir_root
         return (adir.mediatype != "Mixed" and
                 artist_column.get(adir) != None and
                 album_column.get(adir) != None)
@@ -372,7 +342,7 @@ def total_sizes(dir_pairs, sizes):
 
     for adir, root in dir_pairs:
         yield adir, root
-        for mediatype, size in adir.sizes.items():
+        for mediatype, size in list(adir.sizes.items()):
             if mediatype in sizes:
                 sizes[mediatype] += size
             else:
@@ -387,10 +357,10 @@ def timer_wrapper(dir_pairs, times):
     Time in seconds elapsed over the entire iteration is stored in times.
     """
 
-    times['start'] = time.clock()
+    times['start'] = time.perf_counter()
     for adir, root in dir_pairs:
         yield adir, root
-    times['elapsed_time'] = time.clock() - times['start']
+    times['elapsed_time'] = time.perf_counter() - times['start']
 
 
 class EmptyDir(object):
@@ -440,10 +410,11 @@ def add_files(dir_pairs, sort_cmp):
         yield adir, root
         if not dnuos.path.isdir(adir.path):
             continue
-        if adir.num_files < 1:
+        # EmptyDir placeholders report None here
+        if not adir.num_files:
             continue
         files = adir.audio_files
-        files.sort(sort_cmp)
+        sort_with(files, sort_cmp)
         for path in files:
             yield audiodir.Dir(path), root
 
@@ -477,7 +448,7 @@ def walk(dir_, sort_cmp, excluded):
     subs = [sub for sub in subs
             if dnuos.path.isdir(sub)
                and sub not in excluded]
-    subs.sort(sort_cmp)
+    sort_with(subs, sort_cmp)
 
     yield dir_
     for sub in subs:

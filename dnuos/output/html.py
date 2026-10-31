@@ -1,6 +1,6 @@
 """HTML renderer"""
 
-from cgi import escape
+from html import escape
 
 import dnuos
 from dnuos.misc import _
@@ -46,7 +46,7 @@ body { color: %s; background: %s; }
             options.text_color, options.bg_color)
 
         for chunk in self.renderer.render(dir_pairs, options, data):
-            yield escape(chunk)
+            yield escape(chunk, quote=False)
 
         yield """</pre>
 </body>

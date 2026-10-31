@@ -6,7 +6,7 @@ compared to an expected result.
 import difflib
 import os
 import sys
-from cStringIO import StringIO
+from io import StringIO
 from glob import glob
 
 import dnuos

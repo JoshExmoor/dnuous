@@ -1,6 +1,7 @@
 """Tools for compiling gettext catalogs"""
 
 import array
+import ast
 import os
 import struct
 
@@ -13,21 +14,22 @@ def _add(messages, id_, str_, fuzzy):
 
 
 def _generate(messages):
-    """Return the generated output"""
+    """Return the generated output (bytes)"""
 
-    keys = messages.keys()
+    # Catalogs are UTF-8; the .mo offsets and sizes are byte counts.
+    encoded = dict((k.encode('utf-8'), v.encode('utf-8'))
+                   for k, v in messages.items())
     # the keys are sorted in the .mo file
-    keys.sort()
+    keys = sorted(encoded.keys())
     offsets = []
-    ids = ''
-    strs = ''
+    ids = b''
+    strs = b''
     for id_ in keys:
         # For each string, we need size and file offset.  Each string is NUL
         # terminated; the NUL does not count into the size.
-        offsets.append((len(ids), len(id_), len(strs), len(messages[id_])))
-        ids += id_ + '\0'
-        strs += messages[id_] + '\0'
-    output = ''
+        offsets.append((len(ids), len(id_), len(strs), len(encoded[id_])))
+        ids += id_ + b'\0'
+        strs += encoded[id_] + b'\0'
     # The header is 7 32-bit unsigned integers.  We don't use hash tables, so
     # the keys start right after the index tables.
     # translated string.
@@ -43,13 +45,13 @@ def _generate(messages):
         voffsets += [line2, offset2 + valuestart]
     offsets = koffsets + voffsets
     output = struct.pack("Iiiiiii",
-                         0x950412deL,           # Magic
+                         0x950412de,            # Magic
                          0,                     # Version
                          len(keys),             # # of entries
                          7 * 4,                 # start of key index
                          7 * 4 + len(keys) * 8, # start of value index
                          0, 0)                  # size and offset of hash table
-    output += array.array("i", offsets).tostring()
+    output += array.array("i", offsets).tobytes()
     output += ids
     output += strs
     return output
@@ -63,11 +65,8 @@ def compile_catalog(path):
 
     outpath = os.path.splitext(path)[0] + '.mo'
 
-    infile = open(path)
-    try:
+    with open(path, encoding='utf-8') as infile:
         lines = infile.readlines()
-    finally:
-        infile.close()
 
     messages = {}
     section = None
@@ -92,7 +91,8 @@ def compile_catalog(path):
         # Now we are in a msgid section, output previous section
         if line.startswith('msgid'):
             if section == STR:
-                _add(msgid, msgstr, fuzzy)
+                _add(messages, msgid, msgstr, fuzzy)
+                fuzzy = False
             section = ID
             line = line[5:]
             msgid = msgstr = ''
@@ -104,8 +104,8 @@ def compile_catalog(path):
         line = line.strip()
         if not line:
             continue
-        # XXX: Does this always follow Python escape semantics?
-        line = eval(line)
+        # Catalog strings are C-style quoted literals
+        line = ast.literal_eval(line)
         if section == ID:
             msgid += line
         elif section == STR:
@@ -119,8 +119,5 @@ def compile_catalog(path):
     # Compute output
     output = _generate(messages)
 
-    outfile = open(outpath, 'wb')
-    try:
+    with open(outpath, 'wb') as outfile:
         outfile.write(output)
-    finally:
-        outfile.close()

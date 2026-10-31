@@ -4,11 +4,6 @@ import os
 import sys
 from traceback import format_exception
 
-try:
-    set
-except NameError:
-    from sets import Set as set
-
 import dnuos.path
 from dnuos import audiotype
 from dnuos.misc import dir_depth
@@ -26,7 +21,7 @@ class Dir(object):
                  '_bitrates', '_lengths', '_types', 'modified', 'path',
                  '_profiles', 'sizes', '_vendors', 'years')
 
-    __version__ = '1.0.9'
+    __version__ = '2.0.0'
 
     def __init__(self, path):
         """Makes an empty Dir for path"""
@@ -42,15 +37,19 @@ class Dir(object):
 
         self._audio_files = self._parse_audio_files()
         streams, self._bad_files = self.get_streams()
-        self.artists = self._parse_artist(streams)
-        self.albums = self._parse_album(streams)
-        self.years = self._parse_year(streams)
-        self.sizes = self._parse_size(streams)
-        self._lengths = self._parse_length(streams)
-        self._types = self._parse_types(streams)
-        self._bitrates = self._parse_bitrates(streams)
-        self._profiles = self._parse_profile(streams)
-        self._vendors = self._parse_vendors(streams)
+        try:
+            self.artists = self._parse_artist(streams)
+            self.albums = self._parse_album(streams)
+            self.years = self._parse_year(streams)
+            self.sizes = self._parse_size(streams)
+            self._lengths = self._parse_length(streams)
+            self._types = self._parse_types(streams)
+            self._bitrates = self._parse_bitrates(streams)
+            self._profiles = self._parse_profile(streams)
+            self._vendors = self._parse_vendors(streams)
+        finally:
+            for stream in streams:
+                stream.close()
         self.modified = self._parse_modified()
 
     def depth_from(self, root):
@@ -129,27 +128,27 @@ class Dir(object):
 
         res = {}
         for stream in streams:
-            for tag, artist in stream.artist().iteritems():
+            for tag, artist in stream.artist().items():
                 res.setdefault(tag, set()).add(artist)
-        return dict([(k, tuple(v)) for (k, v) in res.iteritems()])
+        return dict([(k, tuple(v)) for (k, v) in res.items()])
 
     def _parse_album(self, streams):
         """Gets the album for the audio files"""
 
         res = {}
         for stream in streams:
-            for tag, album in stream.album().iteritems():
+            for tag, album in stream.album().items():
                 res.setdefault(tag, set()).add(album)
-        return dict([(k, tuple(v)) for (k, v) in res.iteritems()])
+        return dict([(k, tuple(v)) for (k, v) in res.items()])
 
     def _parse_year(self, streams):
         """Gets the year for the audio files"""
 
         res = {}
         for stream in streams:
-            for tag, year in stream.year().iteritems():
+            for tag, year in stream.year().items():
                 res.setdefault(tag, set()).add(year)
-        return dict([(k, tuple(v)) for (k, v) in res.iteritems()])
+        return dict([(k, tuple(v)) for (k, v) in res.items()])
 
     def _parse_size(self, streams):
         """Determines size in bytes.
@@ -238,9 +237,9 @@ class Dir(object):
             if not profiles:
                 res.setdefault(None, set())
             else:
-                for key, profile in profiles.iteritems():
+                for key, profile in profiles.items():
                     res.setdefault(key, set()).add(profile)
-        return dict([(k, tuple(v)) for (k, v) in res.iteritems()])
+        return dict([(k, tuple(v)) for (k, v) in res.items()])
 
     def _get_profile(self):
         """Return encoding profile name.
@@ -249,7 +248,7 @@ class Dir(object):
         is returned.
         """
         if len(self._profiles) == 1:
-            profiles = self._profiles.values()[0]
+            profiles = list(self._profiles.values())[0]
         else:
             profiles = set()
 
@@ -285,7 +284,7 @@ class Dir(object):
         """
         if self.profile:
             return self.profile
-        return "%i %s" % (int(self.bitrate) / 1000, self.brtype)
+        return "%i %s" % (int(self.bitrate) // 1000, self.brtype)
     quality = property(_get_quality)
 
     def _get_audiolist_format(self):
@@ -297,8 +296,9 @@ class Dir(object):
                 res.add(int(bitrate / 1000))
             else:
                 res.add(table[type_])
-        res = list(res)
-        res.sort()
+        # Numeric CBR bitrates first, then the "VBR"/"LL" labels (the order
+        # Python 2's mixed-type comparison produced).
+        res = sorted(res, key=lambda x: (isinstance(x, str), x))
         return ', '.join([str(x) for x in res])
     audiolist_format = property(_get_audiolist_format)
 

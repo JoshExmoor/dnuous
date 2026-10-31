@@ -1,8 +1,8 @@
 # @(#) $Id: __init__.py,v 1.5 2004/03/02 05:26:07 myers_carpenter Exp $
 __revision__ = "$Revision: 1.5 $"
 
+import io
 import re, struct
-import cStringIO as StringIO
 import string
 
 from dnuos.id3 import ID3v2Frames
@@ -76,9 +76,9 @@ class ID3v2(object):
         try:
             frametype = ID3v2Frames.frameTypes[self.version[1]][frameid][1]
             if frametype != ID3v2Frames.TextInfo:
-                raise Error, "%r is not a TextInfo frame type" % (frameid,)
+                raise Error("%r is not a TextInfo frame type" % (frameid,))
         except KeyError:
-            raise Error, "%r is not a TextInfo frame type" % (frameid,)
+            raise Error("%r is not a TextInfo frame type" % (frameid,))
 
         for frame in self.frames:
             if frame.id == frameid:
@@ -145,7 +145,7 @@ class ID3v2(object):
         try:
             frame_info = ID3v2Frames.frameTypes[self.version[1]][frameid]
             newframe = frame_info[1](frameid, self.version, data)
-        except KeyError, err:
+        except KeyError as err:
 #           warnings.warn("Unknown frame type %r in file %r" % (frameid, self.filename,))
             newframe = ID3v2Frames.UnknownFrame(frameid, self.version, data)
 
@@ -161,15 +161,15 @@ class ID3v2(object):
         _match_frame = self._match_frame
         self.fh = fh
         fh.seek(0)
-        if fh.read(3) != 'ID3':
+        if fh.read(3) != b'ID3':
             return
 
         verinfo = fh.read(2)
-        self.version = (2,ord(verinfo[0]),ord(verinfo[1]),)
+        self.version = (2,verinfo[0],verinfo[1],)
         if(self.version[1] < 3):
-            raise Error, "Cannot process tags with version less than 2.3.0 (This tag's version is 2.%s.%s)" % (self.version[1],self.version[2],)
+            raise Error("Cannot process tags with version less than 2.3.0 (This tag's version is 2.%s.%s)" % (self.version[1],self.version[2],))
         if(self.version[1] > 4) or (self.version[2] > 0):
-            raise Error, "Cannot process tags with version greater than 2.4.0 (This tag's version is 2.%s.%s)" % (self.version[1], self.version[2],)
+            raise Error("Cannot process tags with version greater than 2.4.0 (This tag's version is 2.%s.%s)" % (self.version[1], self.version[2],))
 
         tag_flags = binfuncs.byte2bin(fh.read(1), 8)
 
@@ -187,22 +187,24 @@ class ID3v2(object):
 
         self.tag_size = binfuncs.synchsafe2dec(fh.read(4))
         if DEBUG_LEVEL >= 1:
-            print "tag version: %d.%d.%d" % self.version
-            print "tag size:", self.tag_size
-            print "unsync:", self.unsync
+            print("tag version: %d.%d.%d" % self.version)
+            print("tag size:", self.tag_size)
+            print("unsync:", self.unsync)
 
         if self.version[1] == 3 and self.unsync:
             # print self.tag_size
             tag = fh.read(self.tag_size)
             tag = binfuncs.deunsynchstr(tag)
             self.tag_size = len(tag)
-            fh = StringIO.StringIO(tag)
+            fh = io.BytesIO(tag)
 
         sizeleft = self.tag_size
 
         # 11 == frame header + 1 byte frame, smallest legal frame
         while sizeleft >= 11:
-            frameid = fh.read(4)
+            # Frame ids are ASCII; latin-1 maps every byte so garbage ids
+            # still round-trip into the error messages below.
+            frameid = fh.read(4).decode('latin-1')
             if _match_frame(frameid) or frameid in ID3v2Frames.frameTypes[self.version[1]]:
                 rawframesize = fh.read(4)
                 if self.version[1] >= 4 and frameid != 'COM ':
@@ -224,7 +226,7 @@ class ID3v2(object):
                         raise BrokenFrameError("Invalid frame size %r (raw: %r).  Frame type was %r. Corrupt tag." % (framesize,rawframesize,frameid,))
                 data = fh.read(framesize + 2)
                 if DEBUG_LEVEL >= 2:
-                    print "Raw frame: %r" % (data,)
+                    print("Raw frame: %r" % (data,))
             elif frameid == '\x00\x00\x00\x00' or frameid == 'MP3e':
                 # MP3ext http://www.mutschler.de/mp3ext/ puts "MP3ext " over and over in the padding
                 sizeleft -= 4
@@ -240,7 +242,7 @@ class ID3v2(object):
             try:
                 if limit_frames and frameid in limit_frames:
                     self.new_frame(frameid, data)
-            except BrokenFrameError, err:
+            except BrokenFrameError as err:
                 if self.broken_frames == 'drop':
 #                   warnings.warn("Broken frame in %r. Dropping frame." % self.filename)
                     pass
@@ -287,7 +289,8 @@ class ID3v1(object):
                 raise NoTagError
             return
         fh.seek(-128, 2)
-        id3tag = fh.read(128)
+        # ID3v1 has no defined encoding; latin-1 is the de facto standard.
+        id3tag = fh.read(128).decode('latin-1')
         if id3tag[0:3] != 'TAG':
             if self.error_if_no_tag:
                 raise NoTagError

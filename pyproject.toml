@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dnuos"
+version = "1.0.12"
+description = "A tool for creating lists of music collections"
+readme = { file = "README.txt", content-type = "text/markdown" }
+requires-python = ">=3.8"
+license = { text = "GNU GPL" }
+authors = [
+    { name = "Mattias Päivärinta", email = "pejve@vasteras2.net" },
+    { name = "Brodie Rao", email = "brodie@bitheap.org" },
+]
+keywords = ["music", "collection", "list", "metadata", "mp3", "audiolist", "oidua"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License (GPL)",
+    "Natural Language :: English",
+    "Natural Language :: French",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: File Sharing",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+
+[project.urls]
+Homepage = "http://bitheap.org/dnuos/"
+
+[project.scripts]
+dnuos = "dnuos:cli"
+
+[tool.setuptools]
+packages = ["dnuos", "dnuos.cache", "dnuos.id3", "dnuos.output"]
+zip-safe = false
+
+[tool.setuptools.package-data]
+dnuos = ["locale/*/LC_MESSAGES/*.mo"]

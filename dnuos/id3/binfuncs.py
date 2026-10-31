@@ -2,12 +2,10 @@ def synchsafe2dec(string):
     """
     Convert a 4 byte string encoded with the synchsafe scheme into a C{int}
     """
-    # chop our string into a list of bytes
-    bytelist = list(string)
     # chop our list of bytes into a list of bits
     bitlist = []
-    for byte in bytelist:
-        bitlist += dec2bin(ord(byte), 8)
+    for byte in bytearray(string):
+        bitlist += dec2bin(byte, 8)
     bitlist = synchsafe2bin(bitlist)
     x = bin2dec(bitlist)
     return x
@@ -40,10 +38,8 @@ def synchsafe2bin(x):
 
 def byte2bin(y, p=0):
     res2 = []
-    for x in y:
-        z = x
+    for x in bytearray(y):
         res = []
-        x = ord(x)
         while x > 0:
             res.append(x & 1)
             x = x >> 1
@@ -55,7 +51,7 @@ def byte2bin(y, p=0):
 
 def bin2byte(x):
     i = 0
-    out = ''
+    out = []
     x.reverse()
     b = 1
     ttl = 0
@@ -65,15 +61,13 @@ def bin2byte(x):
         b *= 2
         if i == 8:
             i = 0
-            out += chr(ttl)
+            out.append(ttl)
             b = 1
             ttl = 0
     if b > 1:
-        out += chr(ttl)
-    out = list(out)
+        out.append(ttl)
     out.reverse()
-    out = ''.join(out)
-    return out
+    return bytes(out)
 
 def bin2dec(x):
     x.reverse()
@@ -109,20 +103,18 @@ def bin2synchsafe(x):
             c = 0
     return out
 
-def unsynchstr(bytes):
+def unsynchstr(data):
     lastfound = -1
     while 1:
-        lastfound = bytes.find('\xff', lastfound + 1)
+        lastfound = data.find(b'\xff', lastfound + 1)
         if lastfound == -1:
             break
-        if (lastfound + 1) == len(bytes):
-            bytes = bytes + '\x00'
-        elif ((ord(bytes[lastfound+1]) & ord('\xe0')) == ord('\xe0')) or (bytes[lastfound+1] == '\x00'):
-            bytes = bytes[:lastfound+1] + '\x00' + bytes[lastfound+1:]
+        if (lastfound + 1) == len(data):
+            data = data + b'\x00'
+        elif (data[lastfound+1] & 0xe0) == 0xe0 or data[lastfound+1] == 0:
+            data = data[:lastfound+1] + b'\x00' + data[lastfound+1:]
 
-    return bytes
+    return data
 
-def deunsynchstr(bytes):
-    # print bytes.count('\xff\x00')
-    return bytes.replace('\xff\x00', '\xff')
-
+def deunsynchstr(data):
+    return data.replace(b'\xff\x00', b'\xff')

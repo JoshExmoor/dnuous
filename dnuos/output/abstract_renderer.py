@@ -2,11 +2,6 @@ import locale
 import time
 import unicodedata
 
-try:
-    set
-except NameError:
-    from sets import Set as set
-
 from dnuos.misc import to_human, _
 
 class AbstractRenderer(object):
@@ -47,9 +42,9 @@ class Column(object):
 
         formatter_table = {
             "b": lambda data, depth: to_human(int(data), 1000.0),
-            "B": lambda data, depth: locale.format('%d', data),
+            "B": lambda data, depth: locale.format_string('%d', data),
             "l": lambda data, depth: to_minutes(int(data)),
-            "L": lambda data, depth: locale.format('%d', data),
+            "L": lambda data, depth: locale.format_string('%d', data),
             "m": lambda data, depth: time.ctime(data),
             "n": lambda data, depth: self.indent(data, depth),
             "s": lambda data, depth: to_human(data),
@@ -61,24 +56,18 @@ class Column(object):
             self.formatter = lambda x, y: x
         self.name, self.get = attr_table[tag]
 
-        self._encoding = ('utf-8',)
         self._prefer_tag = options.prefer_tag
 
     def _textencode(self, str_):
-        try:
-            unicode(str_, "ascii")
-        except UnicodeError:
-            str_ = unicode(str_, "latin1")
-        except TypeError:
-            pass
-        else:
-            pass
+        """Normalize an ID3 tag value: decode stray bytes, cut at NUL"""
 
-        return str_.encode(*self._encoding).split('\0', 1)[0]
+        if isinstance(str_, bytes):
+            str_ = str_.decode('latin-1')
+        return str_.split('\0', 1)[0]
 
     def _get_tag_keys(self, data):
         if len(data) == 1:
-            keys = data.keys()
+            keys = list(data.keys())
             encoder = lambda x: x
         elif set(data.keys()) == set(['id3v1', 'id3v2']):
             if self._prefer_tag == 1:
@@ -140,14 +129,8 @@ class Column(object):
             else:
                 data = ' ' * len(self.suffix)
         if self.width != None:
-            try:
-                if not isinstance(data, unicode):
-                    data = data.decode('utf-8')
-                data = unicodedata.normalize('NFC', data)
-                data = u"%*.*s" % (self.width, abs(self.width), data)
-                data = data.encode('utf-8')
-            except UnicodeError:
-                data = "%*.*s" % (self.width, abs(self.width), data)
+            data = unicodedata.normalize('NFC', data)
+            data = "%*.*s" % (self.width, abs(self.width), data)
         return data
 
     def header(self, suffixes=True):
@@ -180,4 +163,4 @@ def parse_field(field_string, options):
 
 def to_minutes(value):
 
-    return "%i:%02i" % (value / 60, value % 60)
+    return "%i:%02i" % (value // 60, value % 60)

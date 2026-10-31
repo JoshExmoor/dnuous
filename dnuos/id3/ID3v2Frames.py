@@ -1,10 +1,20 @@
 # @(#) $Id: ID3v2Frames.py,v 1.5 2004/03/02 05:26:07 myers_carpenter Exp $
 __version__ = "$Revision: 1.5 $"
 
-import sys, re, zlib, imghdr, struct
+import sys, re, zlib, struct
 
 import dnuos.id3
 from dnuos.id3 import binfuncs
+
+
+def _image_type(data):
+    """Minimal replacement for the removed imghdr module (PNG/JPEG only)"""
+
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'png'
+    if data[:3] == b'\xff\xd8\xff':
+        return 'jpeg'
+    return None
 
 class ID3v2Frame(object):
     def __init__(self, id, version = (2,3,0,), data = None):
@@ -27,7 +37,7 @@ class ID3v2Frame(object):
         self.encryption_method = None
 
         # everything that's not part of the header
-        self.data = ''
+        self.data = b''
 
         try:
             self.name = frameTypes[self.version[1]][self.id][0]
@@ -66,7 +76,7 @@ class ID3v2Frame(object):
             raise
         except:
             (exctype, value,) = sys.exc_info()[:2]
-            raise dnuos.id3.BrokenFrameError, "%s: %s" % (exctype, str(value),)
+            raise dnuos.id3.BrokenFrameError("%s: %s" % (exctype, str(value),))
 
 
     def _parse_frame(self, data):
@@ -110,7 +120,7 @@ class ID3v2Frame(object):
             self._unsynchronisation = flags[14]
             self.data_length_indicator = flags[15]
             if self._compression and not self.data_length_indicator:
-                raise dnuos.id3.BrokenFrameError, "The compression flag was set but not the data_length_indicator"
+                raise dnuos.id3.BrokenFrameError("The compression flag was set but not the data_length_indicator")
         else:
             raise dnuos.id3.Error("Unsupported tag (how did we not catch this before?)")
 
@@ -169,76 +179,76 @@ class ID3v2Frame(object):
         """
 
         try:
-            if self._encoding == '\x00' or self._encoding == '\x03':
-                nullindex = data.index('\x00')
+            if self._encoding == b'\x00' or self._encoding == b'\x03':
+                nullindex = data.index(b'\x00')
                 return (data[:nullindex], data[nullindex+1:],)
-            elif self._encoding == '\x01' or self._encoding == '\x02':
+            elif self._encoding == b'\x01' or self._encoding == b'\x02':
                 nullindex = 0
                 while 1:
-                    nullindex = data[nullindex:].index('\x00\x00') + nullindex
+                    nullindex = data[nullindex:].index(b'\x00\x00') + nullindex
                     if nullindex % 2 == 0:
                         break
                     nullindex = nullindex + 1
 
                 return (data[:nullindex], data[nullindex+2:],)
-        except ValueError, err:
-            raise dnuos.id3.BrokenFrameError, "Corrupt tag, orig error: " + str(err)
+        except ValueError as err:
+            raise dnuos.id3.BrokenFrameError("Corrupt tag, orig error: " + str(err))
 
     def termination(self):
-        if self._encoding == '\x00' or self._encoding == '\x03':
-            return '\x00'
+        if self._encoding == b'\x00' or self._encoding == b'\x03':
+            return b'\x00'
         else:
-            return '\x00\x00'
+            return b'\x00\x00'
 
     def find_best_encoding(self, value):
         try:
             value.encode('iso-8859-1', 'strict')
-            return '\x00'
+            return b'\x00'
         except UnicodeEncodeError:
             if self.version[1] < 4:
-                return '\x01'
+                return b'\x01'
             else:
-                return '\x03'
+                return b'\x03'
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         except:
-            print "%r" % type(value)
+            print("%r" % type(value))
             raise
 
     def decode(self, value):
         # ISO-8859-1
-        if self._encoding == '\x00':
+        if self._encoding == b'\x00':
             value = value.decode('iso-8859-1')
         # UTF-16
-        elif self._encoding == '\x01':
-            if value == '':
-                raise dnuos.id3.BrokenFrameError, "Unicode text doesn't have BOM"
-            value = unicode(value, 'utf-16')
+        elif self._encoding == b'\x01':
+            if value == b'':
+                raise dnuos.id3.BrokenFrameError("Unicode text doesn't have BOM")
+            value = str(value, 'utf-16')
         # UTF-16BE
-        elif self._encoding == '\x02' and self.version[1] == 4:
-            value = unicode(value, 'utf-16-be')
+        elif self._encoding == b'\x02' and self.version[1] == 4:
+            value = str(value, 'utf-16-be')
         # UTF-8
-        elif self._encoding == '\x03' and self.version[1] == 4:
-            value = unicode(value, 'utf-8')
+        elif self._encoding == b'\x03' and self.version[1] == 4:
+            value = str(value, 'utf-8')
         else:
-            raise dnuos.id3.BrokenFrameError, "Encoding scheme not in spec (%r). Corrupt tag?" % (self._encoding,)
+            raise dnuos.id3.BrokenFrameError("Encoding scheme not in spec (%r). Corrupt tag?" % (self._encoding,))
         return value
 
     def encode(self, value):
         # ISO-8859-1
-        if self._encoding == '\x00':
+        if self._encoding == b'\x00':
             value = value.encode('iso-8859-1')
         # UTF-16
-        elif self._encoding == '\x01':
+        elif self._encoding == b'\x01':
             value = value.encode('utf-16')
         # UTF-16BE
-        elif self._encoding == '\x02' and self.version[1] == 4:
+        elif self._encoding == b'\x02' and self.version[1] == 4:
             value = value.encode('utf-16-be')
         # UTF-8
-        elif self._encoding == '\x03' and self.version[1] == 4:
+        elif self._encoding == b'\x03' and self.version[1] == 4:
             value = value.encode('utf-8')
         else:
-            raise dnuos.id3.BrokenFrameError, "Encoding scheme not in spec (%r). Corrupt tag?" % (self._encoding,)
+            raise dnuos.id3.BrokenFrameError("Encoding scheme not in spec (%r). Corrupt tag?" % (self._encoding,))
         return value
 
 class TextInfo(ID3v2Frame):
@@ -259,7 +269,7 @@ class TextInfo(ID3v2Frame):
     def parse_data(self):
         if len(self.data) < 1:
             raise dnuos.id3.BrokenFrameError("Frame (%s) too short: less than 1" % (self.id,))
-        self._encoding = self.data[0]
+        self._encoding = self.data[:1]
         self._value = self.decode(self.data[1:])
 
 
@@ -344,7 +354,7 @@ class UserTextInfo(ID3v2Frame):
         # we have two encoded strings.  we need to find the encoding that
         # will work for them both
         self._encoding = self.find_best_encoding(self._description)
-        if self._encoding == '\x00':
+        if self._encoding == b'\x00':
             self._encoding = self.find_best_encoding(self._value)
         self._description = description
     def get_description(self):
@@ -355,7 +365,7 @@ class UserTextInfo(ID3v2Frame):
         # we have two encoded strings.  we need to find the encoding that
         # will work for them both
         self._encoding = self.find_best_encoding(self._description)
-        if self._encoding == '\x00':
+        if self._encoding == b'\x00':
             self._encoding = self.find_best_encoding(self._value)
         self._value = value
     def get_value(self):
@@ -383,7 +393,7 @@ class Comment(ID3v2Frame):
         # we have two encoded strings.  we need to find the encoding that
         # will work for them both
         self._encoding = self.find_best_encoding(self._description)
-        if self._encoding == '\x00':
+        if self._encoding == b'\x00':
             self._encoding = self.find_best_encoding(self._value)
         self._description = description
     def get_description(self):
@@ -394,7 +404,7 @@ class Comment(ID3v2Frame):
         # we have two encoded strings.  we need to find the encoding that
         # will work for them both
         self._encoding = self.find_best_encoding(self._description)
-        if self._encoding == '\x00':
+        if self._encoding == b'\x00':
             self._encoding = self.find_best_encoding(self._value)
         self._value = value
     def get_value(self):
@@ -403,7 +413,7 @@ class Comment(ID3v2Frame):
 
     def set_language(self, language):
         if len(language) > 3:
-            raise ValueError, "language can't be more than 3 letters long"
+            raise ValueError("language can't be more than 3 letters long")
         self._language = language.rjust(3)
     def get_language(self):
         return self._language
@@ -421,32 +431,32 @@ class Comment(ID3v2Frame):
 
 class AttachedPicture(ID3v2Frame):
     picturetypes = {
-        '\x00': 'Other',
-        '\x01': "32x32 pixels 'file icon' (PNG only)",
-        '\x02': 'Other file icon',
-        '\x03': 'Cover (front)',
-        '\x04': 'Cover (back)',
-        '\x05': 'Leaflet page',
-        '\x06': 'Media (e.g. lable side of CD)',
-        '\x07': 'Lead artist/lead performer/soloist',
-        '\x08': 'Artist/performer',
-        '\x09': 'Conductor',
-        '\x10': 'Movie/video screen capture',
-        '\x11': 'A bright coloured fish',
-        '\x12': 'Illustration',
-        '\x13': 'Band/artist logotype',
-        '\x14': 'Publisher/Studio logotype',
-        '\x0a': 'Band/Orchestra',
-        '\x0b': 'Composer',
-        '\x0c': 'Lyricist/text writer',
-        '\x0d': 'Recording Location',
-        '\x0e': 'During recording',
-        '\x0f': 'During performance',
+        b'\x00': 'Other',
+        b'\x01': "32x32 pixels 'file icon' (PNG only)",
+        b'\x02': 'Other file icon',
+        b'\x03': 'Cover (front)',
+        b'\x04': 'Cover (back)',
+        b'\x05': 'Leaflet page',
+        b'\x06': 'Media (e.g. lable side of CD)',
+        b'\x07': 'Lead artist/lead performer/soloist',
+        b'\x08': 'Artist/performer',
+        b'\x09': 'Conductor',
+        b'\x10': 'Movie/video screen capture',
+        b'\x11': 'A bright coloured fish',
+        b'\x12': 'Illustration',
+        b'\x13': 'Band/artist logotype',
+        b'\x14': 'Publisher/Studio logotype',
+        b'\x0a': 'Band/Orchestra',
+        b'\x0b': 'Composer',
+        b'\x0c': 'Lyricist/text writer',
+        b'\x0d': 'Recording Location',
+        b'\x0e': 'During recording',
+        b'\x0f': 'During performance',
     }
 
     def __init__(self, id, version = (2,3,0,), data = None):
         self.mimetype = None
-        self.picturetype = '\x03'
+        self.picturetype = b'\x03'
         self.picturetype_name = self.picturetypes[self.picturetype]
         self._description = ''
         self._image = None
@@ -465,18 +475,18 @@ class AttachedPicture(ID3v2Frame):
     def get_image(self):
         return self._image
     def set_image(self, value):
-        type = imghdr.what(None, value)
+        type = _image_type(value)
         if type != 'png' and type != 'jpeg':
-            raise dnuos.id3.Error, "Can't accept images of type %r" % (type,)
+            raise dnuos.id3.Error("Can't accept images of type %r" % (type,))
         self.mimetype = 'image/%s' % (type,)
         self._image = value
     image = property(get_image, set_image)
 
     def parse_data(self):
         self._encoding = self.data[:1]
-        mimetype_end = self.data.find('\x00', 1)
+        mimetype_end = self.data.find(b'\x00', 1)
         self.mimetype = self.data[1:mimetype_end].decode('iso-8859-1')
-        self.picturetype = self.data[mimetype_end+1]
+        self.picturetype = self.data[mimetype_end+1:mimetype_end+2]
         if self.picturetype in self.picturetypes:
             self.picturetype_name = self.picturetypes[self.picturetype]
         (description, self._image,) = self.split_encoded(self.data[mimetype_end+2:])
@@ -502,7 +512,7 @@ class UniqueFileIdentifier(ID3v2Frame):
         return 'Owner: %r, Identifier: %r' % (self.owner, self.identifier,)
 
     def parse_data(self):
-        (owner, identifier) = self.data.split('\x00', 1)
+        (owner, identifier) = self.data.split(b'\x00', 1)
         self.owner = owner.decode('iso-8859-1')
         self.identifier = identifier.decode('iso-8859-1')
 
@@ -767,8 +777,8 @@ frameTypes = {
 }
 
 encoding_map = {
-    '\x00': 'iso-8859-1',
-    '\x01': 'utf-16',
-    '\x02': 'utf-16-be',
-    '\x03': 'utf-8',
+    b'\x00': 'iso-8859-1',
+    b'\x01': 'utf-16',
+    b'\x02': 'utf-16-be',
+    b'\x03': 'utf-8',
 }

@@ -45,6 +45,13 @@ class UnknownType(object):
 
         return {}
 
+    def close(self):
+        """Release the underlying file, if any"""
+
+        f = getattr(self, '_f', None)
+        if f is not None:
+            f.close()
+
 
 class AudioType(UnknownType):
     """Base audio file type"""
@@ -79,7 +86,7 @@ class AudioType(UnknownType):
 
         # check for prepended ID3v2
         self._f.seek(0)
-        if self._f.read(3) == "ID3":
+        if self._f.read(3) == b"ID3":
             self._meta.append((0, "ID3v2"))
             data = struct.unpack("<2x5B", self._f.read(7))
             self._begin += 10 + unpack_bits(data[-4:])
@@ -102,13 +109,13 @@ class AudioType(UnknownType):
 
         # check for ID3v1
         self._f.seek(-128, 2)
-        if self._f.read(3) == "TAG":
+        if self._f.read(3) == b"TAG":
             self._end -= 128
             self._meta.append((self._end, "ID3v1"))
 
         # check for appended ID3v2
         self._f.seek(self._end - 10)
-        if self._f.read(3) == "3DI":
+        if self._f.read(3) == b"3DI":
             data = struct.unpack("<2x5B", self._f.read(7))
             self._end -= 20 + unpack_bits(data[-4:])
             if data[0] & 0x40:
@@ -169,7 +176,7 @@ class Ogg(AudioType):
     def getheader(self):
 
         # Setup header and sync stuff
-        syncpattern = '\x01vorbis'
+        syncpattern = b'\x01vorbis'
         overlap = len(syncpattern) - 1
         headerformat = '<x6sIBI3iB'
         headersize = struct.calcsize(headerformat)
@@ -195,7 +202,7 @@ class Ogg(AudioType):
     def getcomment(self):
 
         # Get Ogg comment
-        syncpattern = '\x03vorbis'
+        syncpattern = b'\x03vorbis'
         overlap = len(syncpattern) - 1
         jvlformat = "<7xI"
         jvlformatsize = struct.calcsize(jvlformat)
@@ -216,18 +223,18 @@ class Ogg(AudioType):
                 vendor_length = struct.unpack(jvlformat, self._f.read(
                                               jvlformatsize))[0]
                 format = "<%ds" % vendor_length
-                self.vendor = struct.unpack(format, self._f.read(
-                                            struct.calcsize(format)))[0]
+                self.vendor = _text(struct.unpack(format, self._f.read(
+                                            struct.calcsize(format)))[0])
                 listlength = struct.unpack(llclformat,
                                            self._f.read(llclformatsize))[0]
                 comments = []
-                for i in xrange(listlength):
+                for i in range(listlength):
                     commentlength = struct.unpack(llclformat,
                                         self._f.read(llclformatsize))[0]
                     format = "<%ds" % commentlength
                     tmpcomment = struct.unpack(format,
                                    self._f.read(struct.calcsize(format)))[0]
-                    comments.append(tmpcomment)
+                    comments.append(_text(tmpcomment))
                 return comments
             # Read next chunk
             start += 1024
@@ -237,7 +244,7 @@ class Ogg(AudioType):
     def lastgranule(self):
 
         # The setup header and sync stuff
-        syncpattern = 'OggS'
+        syncpattern = b'OggS'
         overlap = len(syncpattern) - 1
         headerformat = '<4s2xl'
         headersize = struct.calcsize(headerformat)
@@ -345,7 +352,7 @@ class Opus(AudioType):
     def getheader(self):
 
         # Locate the OpusHead identification header and unpack its fields.
-        syncpattern = 'OpusHead'
+        syncpattern = b'OpusHead'
         overlap = len(syncpattern) - 1
         # version(B) channels(B) preskip(H) input rate(I) gain(h) family(B)
         headerformat = '<BBHIhB'
@@ -370,7 +377,7 @@ class Opus(AudioType):
 
         # Locate the OpusTags header. It shares the Vorbis comment layout:
         # a vendor string followed by a list of "FIELD=value" comments.
-        syncpattern = 'OpusTags'
+        syncpattern = b'OpusTags'
         overlap = len(syncpattern) - 1
         lenformat = "<I"
         lensize = struct.calcsize(lenformat)
@@ -386,17 +393,17 @@ class Opus(AudioType):
                 vendor_length = struct.unpack(lenformat,
                                     self._f.read(lensize))[0]
                 format = "<%ds" % vendor_length
-                self.vendor = struct.unpack(format,
-                                  self._f.read(struct.calcsize(format)))[0]
+                self.vendor = _text(struct.unpack(format,
+                                  self._f.read(struct.calcsize(format)))[0])
                 listlength = struct.unpack(lenformat,
                                  self._f.read(lensize))[0]
                 comments = []
-                for i in xrange(listlength):
+                for i in range(listlength):
                     commentlength = struct.unpack(lenformat,
                                         self._f.read(lensize))[0]
                     format = "<%ds" % commentlength
-                    comments.append(struct.unpack(format,
-                                    self._f.read(struct.calcsize(format)))[0])
+                    comments.append(_text(struct.unpack(format,
+                                    self._f.read(struct.calcsize(format)))[0]))
                 return comments
             start += 1024
             self._f.seek(start + overlap)
@@ -406,7 +413,7 @@ class Opus(AudioType):
     def lastgranule(self):
 
         # Scan backwards for the last Ogg page and read its granule position.
-        syncpattern = 'OggS'
+        syncpattern = b'OggS'
         overlap = len(syncpattern) - 1
         # capture pattern(4s), skip version+header type(2x), granule(q)
         headerformat = '<4s2xq'
@@ -473,7 +480,7 @@ class MP3(AudioType):
 
         AudioType.__init__(self, file_)
 
-        self.mp3header = self.getheader(self.stream_begin())
+        self.mp3header = _decode_fields(self.getheader(self.stream_begin()))
         self.brtype = "CV"[self.mp3header[1] in ('Xing', 'VBRI')]
         self.framesync = (self.mp3header[0] >> 21 & 2047)
         self.versionindex = (self.mp3header[0] >> 19 & 3)
@@ -565,8 +572,8 @@ class MP3(AudioType):
         else:
             return AudioType.streamsize(self)
 
-    _search_sync = re.compile('\xff[\xe0-\xff]').search
-    _search_info = re.compile('(Xing|Info|VBRI)').search
+    _search_sync = re.compile(rb'\xff[\xe0-\xff]').search
+    _search_info = re.compile(rb'(Xing|Info|VBRI)').search
 
     def getheader(self, offset=0):
 
@@ -602,7 +609,7 @@ class MP3(AudioType):
                     info = _search_info(chunk)
                     while info:
                         self._f.seek(start + info.start())
-                        if info.group() == 'VBRI':
+                        if info.group() == b'VBRI':
                             data = struct.unpack(pattern3,
                                     self._f.read(pattern3size))
                             return (header[0], data[0], None, data[2],
@@ -622,7 +629,7 @@ class MP3(AudioType):
             raise SpacerError("Spacer found %s" % self._f.name)
         self._f.seek(offset)
         tag = struct.unpack(">3s", self._f.read(struct.calcsize(">3s")))
-        if tag[0] == "TAG":
+        if tag[0] == b"TAG":
             raise SpacerError("Spacer found %s" % self._f.name)
 
     def modificator(self):
@@ -662,9 +669,9 @@ class MP3(AudioType):
                 elif preset in (410, 420, 430, 440, 450, 460, 470, 480, 490,
                                 500):
                     if vbrmethod == 4:
-                        res["lame"] = "-V%dn" % ((500 - preset) / 10)
+                        res["lame"] = "-V%dn" % ((500 - preset) // 10)
                     else:
-                        res["lame"] = "-V%d" % ((500 - preset) / 10)
+                        res["lame"] = "-V%d" % ((500 - preset) // 10)
                 # deprecated values?
                 elif preset == 1000:
                     res["lame"] = "-r3mix"
@@ -803,16 +810,16 @@ class MPC(AudioType):
                     res['id3v2'] = frame.value
         return res
 
-    _search_header = re.compile('MP+').search
+    _search_header = re.compile(rb'MP+').search
 
     def headerstart(self):
 
         _search_header = self._search_header
         self._f.seek(0)
-        for x in xrange(self.filesize / 1024):
+        for x in range(self.filesize // 1024):
             buf = self._f.read(1024)
             if _search_header(buf):
-                return (x * 1024) + buf.find('MP+')
+                return (x * 1024) + buf.find(b'MP+')
 
     def getheader(self):
 
@@ -889,12 +896,12 @@ class FLAC(AudioType):
         self.parse()
         self.samples = self.streaminfo[7]
         self.freq = self.streaminfo[4]
-        self.time = self.samples / self.freq
-        self._bitrate = self.streamsize() * 8 / self.time
+        self.time = self.samples // self.freq
+        self._bitrate = self.streamsize() * 8 // self.time
         self.channels = self.streaminfo[5]
         samplebits = self.streaminfo[6]
-        self.compression = self.streamsize() / (self.samples * samplebits *
-            self.channels / 8)
+        self.compression = self.streamsize() // (self.samples * samplebits *
+            self.channels // 8)
         self.encoding = "%.1f%%" % self.compression
         self.brtype = "L"
 
@@ -927,7 +934,7 @@ class FLAC(AudioType):
     def parse(self):
 
         # STREAM
-        if struct.unpack('>4s', self._f.read(4))[0] != 'fLaC':
+        if struct.unpack('>4s', self._f.read(4))[0] != b'fLaC':
             return
 
         last = 0
@@ -949,10 +956,10 @@ class FLAC(AudioType):
                    data[4] >> 44,
                    (data[4] >> 41 & 0x07) + 1,
                    (data[4] >> 36 & 0x1F) + 1,
-                   data[4] & 0x0000000FFFFFFFFFL)
+                   data[4] & 0x0000000FFFFFFFFF)
             elif type_ == 3:
                 # Seektable
-                for i in xrange(length / 18):
+                for i in range(length // 18):
                     self.seekpoints.append(struct.unpack('<2QH',
                         self._f.read(18)))
             elif type_ == 4:
@@ -970,12 +977,12 @@ class FLAC(AudioType):
         return length
 
     def read_string(self):
-        return self._f.read(self.read_length())
+        return _text(self._f.read(self.read_length()))
 
     def read_comment_header(self):
         lst = []
         vendor = self.read_string()
-        for i in xrange(self.read_length()):
+        for i in range(self.read_length()):
             lst.append(self.read_string())
         return vendor, lst
 
@@ -1044,12 +1051,12 @@ class AAC(AudioType):
         while len(chunk) > overlap:
             # Get tracklength info from mvhd atom
             if not length_found:
-                sync = chunk.find("mdhd")
+                sync = chunk.find(b"mdhd")
                 if sync != -1:
                     sync -= 4
                     length_found = True
                     self._f.seek(start + sync + 8)
-                    if self._f.read(1) == "\x00":
+                    if self._f.read(1) == b"\x00":
                         sync += 20
                         format = ">2I"
                     else:
@@ -1061,7 +1068,7 @@ class AAC(AudioType):
                     time = float(length) / unit
             # Get frequency and channel info from stsd atom
             if not stsd_found:
-                sync = chunk.find("stsd")
+                sync = chunk.find(b"stsd")
                 if sync != -1:
                     stsd_found = True
                     self._f.seek(start + sync + 4 + 30)
@@ -1072,7 +1079,7 @@ class AAC(AudioType):
                         cfl_fmt_size))[0]
             # Get artist info from (c)ART atom
             if not artist_found:
-                sync = chunk.find('\xa9ART')
+                sync = chunk.find(b'\xa9ART')
                 if sync != -1:
                     artist_found = True
                     # Go back & read size of artist atom
@@ -1082,11 +1089,11 @@ class AAC(AudioType):
                     # Now we can get artist info, but first skip over junk bytes
                     self._f.seek(start + sync + 20)
                     format = "<%ds" % (length[0] - 24)
-                    artist = struct.unpack(format, self._f.read(
-                        struct.calcsize(format)))[0]
+                    artist = _text(struct.unpack(format, self._f.read(
+                        struct.calcsize(format)))[0])
             # Get album info from (c)album atom
             if not album_found:
-                sync = chunk.find('\xa9alb')
+                sync = chunk.find(b'\xa9alb')
                 if sync != -1:
                     album_found = True
                     # Go back and read size of ablum atom
@@ -1096,11 +1103,11 @@ class AAC(AudioType):
                     # get artist info, but skip over junk bytes
                     self._f.seek( start + sync + 20 )
                     format = "<%ds" % (length[0] - 24)
-                    album = struct.unpack(format, self._f.read(
-                        struct.calcsize(format)))[0]
+                    album = _text(struct.unpack(format, self._f.read(
+                        struct.calcsize(format)))[0])
              # Get year info from (c)day atom
             if not year_found:
-                sync = chunk.find('\xa9day')
+                sync = chunk.find(b'\xa9day')
                 if sync != -1:
                     year_found = True
                     # Go back and read size of day atom
@@ -1110,28 +1117,28 @@ class AAC(AudioType):
                     # get year info, but skip over junk bytes
                     self._f.seek( start + sync + 20 )
                     format = "<%ds" % (length[0] - 24)
-                    year = struct.unpack(format, self._f.read(
-                        struct.calcsize(format)))[0]
+                    year = _text(struct.unpack(format, self._f.read(
+                        struct.calcsize(format)))[0])
             if not bitrate_found:
-                sync = chunk.find("esds")
+                sync = chunk.find(b"esds")
                 if sync != -1:
                     sync += 9
                     self._f.seek(start + sync)
-                    if self._f.read(3) == "\x80\x80\x80":
+                    if self._f.read(3) == b"\x80\x80\x80":
                         sync += 3
                     sync += 4
                     self._f.seek(start + sync)
-                    if self._f.read(1) == "\x04":
+                    if self._f.read(1) == b"\x04":
                         sync += 1
                         self._f.seek(start + sync)
-                        if self._f.read(3) == "\x80\x80\x80":
+                        if self._f.read(3) == b"\x80\x80\x80":
                             sync += 3
                         sync += 10
                         self._f.seek(start + sync)
                         bitrate = struct.unpack(">I", self._f.read(
                             struct.calcsize(">I")))[0]
                         if bitrate > 0:
-                            bitrate = bitrate / 1000 * 1000
+                            bitrate = bitrate // 1000 * 1000
                         bitrate = float(bitrate)
                         bitrate_found = True
             if (length_found and stsd_found and artist_found and album_found
@@ -1147,6 +1154,26 @@ class AAC(AudioType):
     def bitrate(self):
 
         return self._bitrate
+
+
+def _text(data):
+    """Decode tag bytes (UTF-8 per the Vorbis/FLAC/MP4 specs) to str"""
+
+    return data.decode('utf-8', 'replace')
+
+
+def _decode_fields(header):
+    """Decode the byte string fields of an unpacked MP3 header.
+
+    Header magic ('Xing', 'Info', 'VBRI') and the LAME encoder string are
+    ASCII; latin-1 keeps any stray bytes so the printable check can reject
+    them.
+    """
+
+    if header is None:
+        return None
+    return tuple([isinstance(f, bytes) and f.decode('latin-1') or f
+                  for f in header])
 
 
 def unpack_bits(bits):
@@ -1166,17 +1193,27 @@ def openstream(filename):
 
     lowername = filename.lower()
     if lowername.endswith(".mp3"):
-        return MP3(filename)
+        cls = MP3
     elif lowername.endswith(".mpc") or lowername.endswith('.mp+'):
-        return MPC(filename)
+        cls = MPC
     elif lowername.endswith(".ogg"):
-        return Ogg(filename)
+        cls = Ogg
     elif lowername.endswith(".opus"):
-        return Opus(filename)
+        cls = Opus
     elif (lowername.endswith(".flac") or lowername.endswith('.fla') or
           lowername.endswith('.flc')):
-        return FLAC(filename)
+        cls = FLAC
     elif lowername.endswith(".m4a"):
-        return AAC(filename)
+        cls = AAC
     else:
-        return UnknownType(filename)
+        cls = UnknownType
+
+    # Construct in two steps so the file handle opened by __init__ can be
+    # closed if parsing fails part way through.
+    stream = cls.__new__(cls)
+    try:
+        stream.__init__(filename)
+    except BaseException:
+        stream.close()
+        raise
+    return stream

@@ -10,7 +10,7 @@ import sys
 import dnuos.path
 
 def user_data_dir(appname, vendor, version=None):
-    """Return full path to the user-specific data dir for this application.
+    r"""Return full path to the user-specific data dir for this application.
 
         "appname" is the name of application.
         "vendor" (only required and used on Windows) is the name of the
@@ -22,7 +22,7 @@ def user_data_dir(appname, vendor, version=None):
             would typically be "<major>.<minor>".
 
     Typical user data directories are:
-        Windows:    C:\Documents and Settings\USER\Application Data\<owner>\<appname>
+        Windows:    C:\Documents and Settings\\USER\Application Data\<owner>\<appname>
         Mac OS X:   ~/Library/Application Support/<appname>
         Unix:       ~/.cache/<lowercased-appname>
     """
@@ -31,8 +31,6 @@ def user_data_dir(appname, vendor, version=None):
     if sys.platform.startswith('win'):
         appdata = os.environ.get('APPDATA')
         if appdata:
-            appdata = appdata.decode(sys.getfilesystemencoding())
-            appdata = appdata.encode('utf-8')
             path = os.path.join(appdata, vendor, appname)
     elif sys.platform == 'darwin':
         try:
@@ -50,7 +48,6 @@ def user_data_dir(appname, vendor, version=None):
         else:
             path = os.path.expanduser('~/.cache')
         path = os.path.join(path, appname.lower())
-        path = path.decode(sys.getfilesystemencoding()).encode('utf-8')
     if version:
         path = os.path.join(path, '-' + version)
     return path
@@ -72,7 +69,7 @@ def create_user_data_dir(dir_):
 
     if cache:
         if not dnuos.path.exists(cache):
-            dnuos.path.mkdir(cache, 0700)
+            dnuos.path.mkdir(cache, 0o700)
         old_cache = dnuos.path.expanduser('~/.dnuos')
         if dnuos.path.exists(old_cache):
             dnuos.path.rename(old_cache, dir_)
