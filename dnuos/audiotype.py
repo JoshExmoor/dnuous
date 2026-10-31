@@ -1,5 +1,6 @@
 """Classes for processing audio file metadata"""
 
+import io
 import os
 import re
 import string
@@ -1026,11 +1027,53 @@ class AAC(AudioType):
 
     def getheader(self):
 
-        self._f.seek(0)
+        # All of the metadata we read lives in the 'moov' box. Searching only
+        # that box avoids reading the whole file (which also happens whenever
+        # a tag is missing) and avoids false matches inside the audio data.
+        moov = self._read_moov()
+        if moov is not None:
+            return self._scan(io.BytesIO(moov))
+        return self._scan(self._f)
 
-        start = self._f.tell()
+    def _read_moov(self):
+        """Return the bytes of the top-level 'moov' box, or None"""
+
+        f = self._f
+        offset = 0
+        while offset + 8 <= self.filesize:
+            f.seek(offset)
+            header = f.read(8)
+            if len(header) < 8:
+                return None
+            size, box_type = struct.unpack('>I4s', header)
+            header_size = 8
+            if size == 1:
+                # 64-bit box size follows the type
+                large = f.read(8)
+                if len(large) < 8:
+                    return None
+                size = struct.unpack('>Q', large)[0]
+                header_size = 16
+            elif size == 0:
+                # Box extends to the end of the file
+                size = self.filesize - offset
+            if size < header_size:
+                return None
+            if box_type == b'moov':
+                f.seek(offset)
+                data = f.read(size)
+                return len(data) == size and data or None
+            offset += size
+        return None
+
+
+    def _scan(self, f):
+
+        f.seek(0)
+
+        start = f.tell()
         overlap = 4
-        chunk = self._f.read(1024 + overlap)
+        chunk = f.read(1024 + overlap)
 
         length_found = False
         stsd_found = False
@@ -1055,15 +1098,15 @@ class AAC(AudioType):
                 if sync != -1:
                     sync -= 4
                     length_found = True
-                    self._f.seek(start + sync + 8)
-                    if self._f.read(1) == b"\x00":
+                    f.seek(start + sync + 8)
+                    if f.read(1) == b"\x00":
                         sync += 20
                         format = ">2I"
                     else:
                         sync += 28
                         format = ">IQ"
-                    self._f.seek(start + sync)
-                    unit, length = struct.unpack(format, self._f.read(
+                    f.seek(start + sync)
+                    unit, length = struct.unpack(format, f.read(
                         struct.calcsize(format)))
                     time = float(length) / unit
             # Get frequency and channel info from stsd atom
@@ -1071,11 +1114,11 @@ class AAC(AudioType):
                 sync = chunk.find(b"stsd")
                 if sync != -1:
                     stsd_found = True
-                    self._f.seek(start + sync + 4 + 30)
-                    channels = struct.unpack(cfl_fmt, self._f.read(
+                    f.seek(start + sync + 4 + 30)
+                    channels = struct.unpack(cfl_fmt, f.read(
                         cfl_fmt_size))[0]
-                    self._f.seek(start + sync + 4 + 38)
-                    frequency = struct.unpack(cfl_fmt, self._f.read(
+                    f.seek(start + sync + 4 + 38)
+                    frequency = struct.unpack(cfl_fmt, f.read(
                         cfl_fmt_size))[0]
             # Get artist info from (c)ART atom
             if not artist_found:
@@ -1083,13 +1126,13 @@ class AAC(AudioType):
                 if sync != -1:
                     artist_found = True
                     # Go back & read size of artist atom
-                    self._f.seek(start + sync - 4)
-                    length = struct.unpack(cfl_fmt, self._f.read(
+                    f.seek(start + sync - 4)
+                    length = struct.unpack(cfl_fmt, f.read(
                         cfl_fmt_size))
                     # Now we can get artist info, but first skip over junk bytes
-                    self._f.seek(start + sync + 20)
+                    f.seek(start + sync + 20)
                     format = "<%ds" % (length[0] - 24)
-                    artist = _text(struct.unpack(format, self._f.read(
+                    artist = _text(struct.unpack(format, f.read(
                         struct.calcsize(format)))[0])
             # Get album info from (c)album atom
             if not album_found:
@@ -1097,13 +1140,13 @@ class AAC(AudioType):
                 if sync != -1:
                     album_found = True
                     # Go back and read size of ablum atom
-                    self._f.seek(start + sync - 4)
-                    length = struct.unpack(cfl_fmt, self._f.read(
+                    f.seek(start + sync - 4)
+                    length = struct.unpack(cfl_fmt, f.read(
                         cfl_fmt_size))
                     # get artist info, but skip over junk bytes
-                    self._f.seek( start + sync + 20 )
+                    f.seek( start + sync + 20 )
                     format = "<%ds" % (length[0] - 24)
-                    album = _text(struct.unpack(format, self._f.read(
+                    album = _text(struct.unpack(format, f.read(
                         struct.calcsize(format)))[0])
              # Get year info from (c)day atom
             if not year_found:
@@ -1111,31 +1154,31 @@ class AAC(AudioType):
                 if sync != -1:
                     year_found = True
                     # Go back and read size of day atom
-                    self._f.seek(start + sync - 4)
-                    length = struct.unpack(cfl_fmt, self._f.read(
+                    f.seek(start + sync - 4)
+                    length = struct.unpack(cfl_fmt, f.read(
                         cfl_fmt_size))
                     # get year info, but skip over junk bytes
-                    self._f.seek( start + sync + 20 )
+                    f.seek( start + sync + 20 )
                     format = "<%ds" % (length[0] - 24)
-                    year = _text(struct.unpack(format, self._f.read(
+                    year = _text(struct.unpack(format, f.read(
                         struct.calcsize(format)))[0])
             if not bitrate_found:
                 sync = chunk.find(b"esds")
                 if sync != -1:
                     sync += 9
-                    self._f.seek(start + sync)
-                    if self._f.read(3) == b"\x80\x80\x80":
+                    f.seek(start + sync)
+                    if f.read(3) == b"\x80\x80\x80":
                         sync += 3
                     sync += 4
-                    self._f.seek(start + sync)
-                    if self._f.read(1) == b"\x04":
+                    f.seek(start + sync)
+                    if f.read(1) == b"\x04":
                         sync += 1
-                        self._f.seek(start + sync)
-                        if self._f.read(3) == b"\x80\x80\x80":
+                        f.seek(start + sync)
+                        if f.read(3) == b"\x80\x80\x80":
                             sync += 3
                         sync += 10
-                        self._f.seek(start + sync)
-                        bitrate = struct.unpack(">I", self._f.read(
+                        f.seek(start + sync)
+                        bitrate = struct.unpack(">I", f.read(
                             struct.calcsize(">I")))[0]
                         if bitrate > 0:
                             bitrate = bitrate // 1000 * 1000
@@ -1146,8 +1189,8 @@ class AAC(AudioType):
                 break
 
             start += 1024
-            self._f.seek(start + overlap)
-            chunk = chunk[-overlap:] + self._f.read(1024)
+            f.seek(start + overlap)
+            chunk = chunk[-overlap:] + f.read(1024)
 
         return (artist, album, year, time, frequency, channels, bitrate)
 

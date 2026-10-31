@@ -2,6 +2,7 @@
 
 __version__ = '1.0.12'
 
+import locale
 import os
 import sys
 import time
@@ -14,7 +15,7 @@ from dnuos import appdata, audiodir
 from dnuos.cache import Cache, memoized
 from dnuos.conf import parse_args
 from dnuos.misc import dir_depth, equal_elements, formatwarning
-from dnuos.misc import merge, sort_with, to_human, _
+from dnuos.misc import merge, sort_with, _
 from dnuos.output.db import DBColumn
 
 __all__ = ['main']
@@ -71,7 +72,7 @@ def prepare_listing(dir_pairs, options, data):
 
     dir_pairs = timer_wrapper(dir_pairs, data.times)
     if options.show_progress:
-        dir_pairs = indicate_progress(dir_pairs, data.size)
+        dir_pairs = indicate_progress(dir_pairs)
     if options.debug:
         dir_pairs = print_bad(dir_pairs)
     elif options.list_bad:
@@ -233,18 +234,55 @@ def cli():
         return 130
 
 
-def indicate_progress(dir_pairs, sizes, outs=sys.stderr):
-    """Indicate progress.
+def format_progress(processed):
+    """Format the progress line for a byte count.
 
-    Yields an unchanged iteration of dirs with an added side effect.
-    Total size in sizes is updated to stderr every step
-    throughout the iteration.
+    A single unit (MB) is used so the number only ever grows; switching
+    units (1023k -> 1.00M) made it look like it went backwards.
+
+    >>> format_progress(0)
+    '0.0 MB processed'
+    >>> format_progress(1536 * 1024)
+    '1.5 MB processed'
     """
 
+    megs = locale.format_string('%.1f', processed / (1024.0 * 1024),
+                                grouping=True)
+    return (_('%sB processed\r') % (megs + ' M')).rstrip('\r')
+
+
+def indicate_progress(dir_pairs, sizes=None, outs=sys.stderr):
+    """Indicate progress.
+
+    Yields an unchanged iteration of dirs with an added side effect: the
+    total size of the audio scanned so far (including the directory just
+    scanned) is written to outs on a single, redrawn line.
+
+    >>> import io
+    >>> class D(object):
+    ...     def __init__(self, size): self.size = size
+    >>> out = io.StringIO()
+    >>> pairs = [(D(100 * 1024 * 1024), '/'), (D(2 * 1024 * 1024), '/')]
+    >>> len(list(indicate_progress(pairs, outs=out)))
+    2
+    >>> out.getvalue().split('\\r')[1:]
+    ['100.0 MB processed', '102.0 MB processed', '                  ', '']
+    """
+
+    processed = 0
+    width = 0
     for adir, root in dir_pairs:
-        print(_('%sB processed\r') % to_human(sizes["Total"]), end='', file=outs)
+        processed += adir.size or 0
+        line = format_progress(processed)
+        # Pad to the widest line so far, so nothing is left behind when the
+        # text gets shorter.
+        width = max(width, len(line))
+        outs.write('\r' + line.ljust(width))
+        outs.flush()
         yield adir, root
-    print("\r               \r", end='', file=outs)
+    if width:
+        outs.write('\r' + ' ' * width + '\r')
+        outs.flush()
 
 
 def print_bad(dir_pairs):
@@ -463,8 +501,14 @@ def to_adir(path_pairs, constructor):
     root). The Dir is validated and root is assigned to it.
     """
 
+    cache = getattr(constructor, 'cache', None)
     for relpath, root in path_pairs:
-        adir = constructor(root + relpath)
+        path = root + relpath
+        adir = constructor(path)
         if not adir.is_valid():
             adir.load()
+            # A stale cache entry was just rescanned. Store the fresh result,
+            # otherwise the directory is rescanned on every future run.
+            if cache is not None:
+                cache[path] = adir
         yield adir, root

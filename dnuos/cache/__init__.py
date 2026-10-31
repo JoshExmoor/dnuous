@@ -41,4 +41,6 @@ def memoized(func, cache):
         cache[key] = value
         return value
 
+    # Exposed so callers can store a refreshed value back under the same key
+    wrapper.cache = cache
     return wrapper
