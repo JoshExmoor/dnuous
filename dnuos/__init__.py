@@ -72,7 +72,8 @@ def prepare_listing(dir_pairs, options, data):
 
     dir_pairs = timer_wrapper(dir_pairs, data.times)
     if options.show_progress:
-        dir_pairs = indicate_progress(dir_pairs)
+        # Look up stderr now; the default argument was bound at import time
+        dir_pairs = indicate_progress(dir_pairs, outs=sys.stderr)
     if options.debug:
         dir_pairs = print_bad(dir_pairs)
     elif options.list_bad:

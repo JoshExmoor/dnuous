@@ -332,7 +332,8 @@ msgid "Strip output of field headers and empty directories"
 msgstr ""
 
 #: dnuos/conf.py:404
-msgid "Set output TEMPLATE (default plaintext)"
+#, python-format
+msgid "Set output TEMPLATE: %s (default plaintext)"
 msgstr ""
 
 #: dnuos/conf.py:405
@@ -578,3 +579,54 @@ msgstr ""
 msgid "Options"
 msgstr ""
 
+
+#: argparse
+msgid "usage: "
+msgstr ""
+
+#: argparse
+msgid "options"
+msgstr ""
+
+#: argparse
+#, python-format
+msgid "%(heading)s:"
+msgstr ""
+
+#: argparse
+msgid "positional arguments"
+msgstr ""
+
+#: argparse
+#, python-format
+msgid "%(prog)s: error: %(message)s\n"
+msgstr ""
+
+#: argparse
+#, python-format
+msgid "argument %(argument_name)s: %(message)s"
+msgstr ""
+
+#: argparse
+#, python-format
+msgid "unrecognized arguments: %s"
+msgstr ""
+
+#: argparse
+msgid "expected one argument"
+msgstr ""
+
+#: argparse
+#, python-format
+msgid "invalid %(type)s value: %(value)r"
+msgstr ""
+
+#: argparse
+#, python-format
+msgid "ambiguous option: %(option)s could match %(matches)s"
+msgstr ""
+
+#: argparse
+#, python-format
+msgid "ignored explicit argument %r"
+msgstr ""

@@ -207,7 +207,7 @@ msgstr "Le bitrate doit être égal à 0 ou compris dans la plage (1..320)"
 #: dnuos/conf.py:155
 #, python-format
 msgid "Unknown template %s"
-msgstr "Template inconnu %s'"
+msgstr "Template inconnu %s"
 
 #: dnuos/conf.py:164
 #, python-format
@@ -400,8 +400,9 @@ msgid "Strip output of field headers and empty directories"
 msgstr "Supprimer de la sortie les en-têtes de champ et les dossiers vides"
 
 #: dnuos/conf.py:404
-msgid "Set output TEMPLATE (default plaintext)"
-msgstr "Activer le TEMPLATE de sortie (plaintext par défaut)"
+#, python-format
+msgid "Set output TEMPLATE: %s (default plaintext)"
+msgstr "Activer le TEMPLATE de sortie : %s (plaintext par défaut)"
 
 #: dnuos/conf.py:405
 msgid "TEMPLATE"
@@ -648,3 +649,54 @@ msgstr "l'option %s ne prend pas de valeurs"
 msgid "Options"
 msgstr "Options "
 
+
+#: argparse
+msgid "usage: "
+msgstr "utilisation : "
+
+#: argparse
+msgid "options"
+msgstr "options"
+
+#: argparse
+#, python-format
+msgid "%(heading)s:"
+msgstr "%(heading)s :"
+
+#: argparse
+msgid "positional arguments"
+msgstr "arguments positionnels"
+
+#: argparse
+#, python-format
+msgid "%(prog)s: error: %(message)s\n"
+msgstr "%(prog)s : erreur : %(message)s\n"
+
+#: argparse
+#, python-format
+msgid "argument %(argument_name)s: %(message)s"
+msgstr "argument %(argument_name)s : %(message)s"
+
+#: argparse
+#, python-format
+msgid "unrecognized arguments: %s"
+msgstr "arguments non reconnus : %s"
+
+#: argparse
+msgid "expected one argument"
+msgstr "un paramètre est attendu"
+
+#: argparse
+#, python-format
+msgid "invalid %(type)s value: %(value)r"
+msgstr "valeur %(type)s invalide : %(value)r"
+
+#: argparse
+#, python-format
+msgid "ambiguous option: %(option)s could match %(matches)s"
+msgstr "option ambiguë : %(option)s peut correspondre à %(matches)s"
+
+#: argparse
+#, python-format
+msgid "ignored explicit argument %r"
+msgstr "argument explicite ignoré : %r"
