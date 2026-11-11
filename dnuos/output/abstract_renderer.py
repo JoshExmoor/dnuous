@@ -129,8 +129,7 @@ class Column(object):
             else:
                 data = ' ' * len(self.suffix)
         if self.width != None:
-            data = unicodedata.normalize('NFC', data)
-            data = "%*.*s" % (self.width, abs(self.width), data)
+            data = fit_width(unicodedata.normalize('NFC', data), self.width)
         return data
 
     def header(self, suffixes=True):
@@ -146,6 +145,63 @@ class Column(object):
         else:
             data = str(self.formatter(data, depth))
         return self._format(data, suffixes)
+
+
+def char_width(char):
+    """Number of terminal/monospace columns a character occupies.
+
+    >>> [char_width(c) for c in 'a\\u00e9\\u5742\\uff21\\u0301\\u200b']
+    [1, 1, 2, 2, 0, 0]
+    """
+
+    if unicodedata.combining(char) or unicodedata.category(char) in (
+            'Mn', 'Me', 'Cf'):
+        return 0
+    if unicodedata.east_asian_width(char) in ('W', 'F'):
+        return 2
+    return 1
+
+
+def display_width(text):
+    """Number of columns text occupies in a monospace font.
+
+    >>> display_width('Bj\\u00f6rk'), display_width('\\u5742\\u672c\\u9f8d\\u4e00')
+    (5, 8)
+    """
+
+    return sum(char_width(c) for c in text)
+
+
+def fit_width(text, width):
+    """Crop text to abs(width) columns, then pad it to exactly that many.
+
+    Like '%*.*s' % (width, abs(width), text), but counting display columns
+    instead of characters, so double-width (CJK) and zero-width (combining)
+    characters keep columns aligned. A negative width left-aligns. A wide
+    character that would straddle the edge is replaced by a space.
+
+    >>> fit_width('abc', 5), fit_width('abc', -5), fit_width('abcdef', -3)
+    ('  abc', 'abc  ', 'abc')
+    >>> fit_width('\\u5742\\u672c\\u9f8d', -5)
+    '\\u5742\\u672c '
+    >>> display_width(fit_width('\\u5742\\u672c\\u9f8d', -5))
+    5
+    """
+
+    limit = abs(width)
+    used = 0
+    end = 0
+    for i, char in enumerate(text):
+        w = char_width(char)
+        if used + w > limit:
+            break
+        used += w
+        end = i + 1
+    else:
+        end = len(text)
+    padding = ' ' * (limit - used)
+    text = text[:end]
+    return width < 0 and text + padding or padding + text
 
 
 def parse_field(field_string, options):

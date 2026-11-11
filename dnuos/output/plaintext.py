@@ -5,7 +5,7 @@ import time
 
 import dnuos
 from dnuos.misc import _
-from dnuos.output.abstract_renderer import AbstractRenderer
+from dnuos.output.abstract_renderer import AbstractRenderer, display_width
 
 class Renderer(AbstractRenderer):
 
@@ -45,7 +45,7 @@ class Renderer(AbstractRenderer):
             fields = [c.header() for c in self.columns]
             line = self.format_string % tuple(fields)
             yield line
-            yield "=" * len(line)
+            yield "=" * display_width(line)
 
         for adir, root in dir_pairs:
             fields = [ c.get_formatted(adir, root) for c in self.columns ]

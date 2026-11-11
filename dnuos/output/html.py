@@ -39,6 +39,10 @@ class Renderer(AbstractRenderer):
 <title>%s</title>
 <style type="text/css">
 body { color: %s; background: %s; }
+/* Monospace fonts with wide script coverage, so characters aren't borrowed
+   from proportional fonts (which breaks column alignment). */
+pre { font-family: "Cascadia Mono", Consolas, "MS Gothic", "Noto Sans Mono CJK JP",
+      "Noto Sans Mono", "DejaVu Sans Mono", Menlo, monospace; }
 </style>
 </head>
 <body>
