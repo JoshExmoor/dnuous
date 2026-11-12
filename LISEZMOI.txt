@@ -55,8 +55,8 @@ Lancez `dnuos --help` pour des informations détaillées sur toutes les options.
 
 Extrayez l'archive et exécutez `setup.py` pour l'installer :
 
-    tar zxvf dnuos-1.0.12.tar.gz
-    cd dnuos-1.0.12
+    tar zxvf dnuos-1.0.13.tar.gz
+    cd dnuos-1.0.13
     sudo python setup.py install
 
 Cela installera un script nommé `dnuos` dans `/usr/local/bin`.
@@ -99,6 +99,13 @@ des interfaces graphiques suivantes :
 
 Quoi de neuf
 ------------
+
+### Version 1.0.13 (30 oct. 2026)
+
+* Corrigé la lecture des fichiers Opus et Ogg Vorbis avec de
+  gros tags (par ex. une pochette intégrée). Leurs dossiers
+  étaient listés sans informations audio et analysés à
+  chaque exécution.
 
 ### Version 1.0.12 (30 sep. 2026)
 

@@ -52,8 +52,8 @@ Run `dnuos --help` for a full rundown of the available options.
 
 Extract the archive and run `setup.py` to install it:
 
-    tar zxvf dnuos-1.0.12.tar.gz
-    cd dnuos-1.0.12
+    tar zxvf dnuos-1.0.13.tar.gz
+    cd dnuos-1.0.13
     sudo python setup.py install
 
 This will install a console script named `dnuos` into `/usr/local/bin`.
@@ -95,6 +95,12 @@ the following graphical front-ends instead:
 
 News
 ----
+
+### Version 1.0.13 (Oct. 30, 2026)
+
+* Fixed Opus and Ogg Vorbis files with large tags (e.g. embedded
+  cover art) failing to be read. Their directories were listed
+  without audio information and rescanned on every run.
 
 ### Version 1.0.12 (Sep. 30, 2026)
 

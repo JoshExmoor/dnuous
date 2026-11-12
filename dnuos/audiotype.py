@@ -194,45 +194,13 @@ class Ogg(AudioType):
 
     def getcomment(self):
 
-        # Get Ogg comment
-        syncpattern = '\x03vorbis'
-        overlap = len(syncpattern) - 1
-        jvlformat = "<7xI"
-        jvlformatsize = struct.calcsize(jvlformat)
-        llclformat = "<I"
-        llclformatsize = struct.calcsize(llclformat)
-
-        # Read first chunk
-        self._f.seek(0)
-        start = self._f.tell()
-        chunk = self._f.read(1024 + overlap)
-
-        # Do all file if we have to
-        while len(chunk) > overlap:
-            # Look for sync
-            sync = chunk.find(syncpattern)
-            if sync != -1:
-                self._f.seek(start + sync)
-                vendor_length = struct.unpack(jvlformat, self._f.read(
-                                              jvlformatsize))[0]
-                format = "<%ds" % vendor_length
-                self.vendor = struct.unpack(format, self._f.read(
-                                            struct.calcsize(format)))[0]
-                listlength = struct.unpack(llclformat,
-                                           self._f.read(llclformatsize))[0]
-                comments = []
-                for i in xrange(listlength):
-                    commentlength = struct.unpack(llclformat,
-                                        self._f.read(llclformatsize))[0]
-                    format = "<%ds" % commentlength
-                    tmpcomment = struct.unpack(format,
-                                   self._f.read(struct.calcsize(format)))[0]
-                    comments.append(tmpcomment)
-                return comments
-            # Read next chunk
-            start += 1024
-            self._f.seek(start + overlap)
-            chunk = chunk[-overlap:] + self._f.read(1024)
+        # The Vorbis comment header is the stream's second packet. It can
+        # span several Ogg pages (e.g. with embedded cover art).
+        packet = _ogg_find_packet(self._f, '\x03vorbis')
+        if packet is None:
+            raise ValueError('No Vorbis comment header found')
+        self.vendor, comments = _parse_comments(packet, len('\x03vorbis'))
+        return comments
 
     def lastgranule(self):
 
@@ -368,40 +336,13 @@ class Opus(AudioType):
 
     def getcomment(self):
 
-        # Locate the OpusTags header. It shares the Vorbis comment layout:
-        # a vendor string followed by a list of "FIELD=value" comments.
-        syncpattern = 'OpusTags'
-        overlap = len(syncpattern) - 1
-        lenformat = "<I"
-        lensize = struct.calcsize(lenformat)
-
-        self._f.seek(0)
-        start = self._f.tell()
-        chunk = self._f.read(1024 + overlap)
-
-        while len(chunk) > overlap:
-            sync = chunk.find(syncpattern)
-            if sync != -1:
-                self._f.seek(start + sync + len(syncpattern))
-                vendor_length = struct.unpack(lenformat,
-                                    self._f.read(lensize))[0]
-                format = "<%ds" % vendor_length
-                self.vendor = struct.unpack(format,
-                                  self._f.read(struct.calcsize(format)))[0]
-                listlength = struct.unpack(lenformat,
-                                 self._f.read(lensize))[0]
-                comments = []
-                for i in xrange(listlength):
-                    commentlength = struct.unpack(lenformat,
-                                        self._f.read(lensize))[0]
-                    format = "<%ds" % commentlength
-                    comments.append(struct.unpack(format,
-                                    self._f.read(struct.calcsize(format)))[0])
-                return comments
-            start += 1024
-            self._f.seek(start + overlap)
-            chunk = chunk[-overlap:] + self._f.read(1024)
-        return []
+        # The OpusTags packet uses the Vorbis comment layout: a vendor string
+        # followed by a list of "FIELD=value" comments.
+        packet = _ogg_find_packet(self._f, 'OpusTags')
+        if packet is None:
+            return []
+        self.vendor, comments = _parse_comments(packet, len('OpusTags'))
+        return comments
 
     def lastgranule(self):
 
@@ -1147,6 +1088,86 @@ class AAC(AudioType):
     def bitrate(self):
 
         return self._bitrate
+
+
+def _ogg_find_packet(f, prefix, max_packets=16):
+    """Return the first Ogg packet starting with prefix, or None.
+
+    An Ogg file is a sequence of pages, and one packet can span several
+    pages: a comment header holding embedded cover art, for example. Packets
+    are therefore rebuilt from each page's segment table instead of being
+    read straight from the file, where page headers would interrupt them.
+    Header packets come first in a stream, so only the first max_packets
+    packets (of any multiplexed stream) are examined.
+    """
+
+    f.seek(0)
+    start = f.read(65536).find('OggS')
+    if start == -1:
+        return None
+    f.seek(start)
+    partial = {}    # serial number -> list of pieces of an unfinished packet
+    seen = 0
+    while seen < max_packets:
+        header = f.read(27)
+        if len(header) < 27:
+            return None
+        if header[:4] != 'OggS':
+            raise ValueError('Lost Ogg page sync at offset %d'
+                             % (f.tell() - 27))
+        serial = struct.unpack('<I', header[14:18])[0]
+        segments = ord(header[26])
+        lacing = [ord(c) for c in f.read(segments)]
+        body = f.read(sum(lacing))
+        if len(lacing) < segments or len(body) < sum(lacing):
+            return None
+        pieces = partial.setdefault(serial, [])
+        pos = 0
+        for lace in lacing:
+            pieces.append(body[pos:pos + lace])
+            pos += lace
+            if lace < 255:
+                # A segment shorter than 255 bytes ends the packet
+                packet = ''.join(pieces)
+                if packet.startswith(prefix):
+                    return packet
+                seen += 1
+                pieces = partial[serial] = []
+                if seen >= max_packets:
+                    return None
+    return None
+
+
+def _parse_comments(packet, offset):
+    """Parse a Vorbis comment block (also used by Opus) from a packet.
+
+    Returns (vendor, comments) as UTF-8 byte strings. Lengths are checked
+    against the packet, so a corrupt block fails at once instead of
+    triggering a huge file read.
+    """
+
+    def length(pos):
+        if pos + 4 > len(packet):
+            raise ValueError('Truncated comment header')
+        return struct.unpack('<I', packet[pos:pos + 4])[0]
+
+    vendor_length = length(offset)
+    offset += 4
+    if offset + vendor_length > len(packet):
+        raise ValueError('Truncated comment header')
+    vendor = packet[offset:offset + vendor_length]
+    offset += vendor_length
+    count = length(offset)
+    offset += 4
+    comments = []
+    for i in xrange(count):
+        size = length(offset)
+        offset += 4
+        if offset + size > len(packet):
+            raise ValueError('Truncated comment header')
+        comments.append(packet[offset:offset + size])
+        offset += size
+    return vendor, comments
 
 
 def unpack_bits(bits):
