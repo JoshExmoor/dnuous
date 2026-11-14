@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "dnuos"
 version = "2.0.0"
 description = "A tool for creating lists of music collections"
-readme = { file = "README.txt", content-type = "text/markdown" }
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8"
 license = { text = "GNU GPL" }
 authors = [
