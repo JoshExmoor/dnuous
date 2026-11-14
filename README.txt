@@ -42,6 +42,10 @@ Download
 
 The source is available at <https://github.com/JoshExmoor/dnuos>.
 
+This is the Python 3 version (2.x). The last Python 2 version, 1.0.14, is on
+the `master` branch (<https://github.com/JoshExmoor/dnuos/tree/master>) and
+is tagged `v1.0.14`. It will not receive further changes.
+
 
 Installation/Usage
 ------------------
