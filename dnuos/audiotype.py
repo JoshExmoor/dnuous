@@ -45,6 +45,13 @@ class UnknownType(object):
 
         return {}
 
+    def close(self):
+        """Release the underlying file, if any"""
+
+        f = getattr(self, '_f', None)
+        if f is not None:
+            f.close()
+
 
 class AudioType(UnknownType):
     """Base audio file type"""
@@ -691,8 +698,10 @@ class MPC(AudioType):
             'AbvBrnded'
         )
         fqtable = (44100, 48000, 37800, 32000)
-        self.freq = fqtable[self.getheader()[3]>>16 & 4]
-        self.framecount = self.getheader()[2]
+        # Read the header once; profile() needs it after the file is closed.
+        self._header = self.getheader()
+        self.freq = fqtable[self._header[3]>>16 & 4]
+        self.framecount = self._header[2]
         self._bitrate = int(self.streamsize() * 144000.0 /
                             float(self.framecount * self.freq))
         self.time = (float(self.framecount) * 1.150 /
@@ -792,7 +801,7 @@ class MPC(AudioType):
 
     def profile(self):
 
-        return {"musepack": self.profiletable[self.getheader()[3] >> 20 & 0xF]}
+        return {"musepack": self.profiletable[self._header[3] >> 20 & 0xF]}
 
     def bitrate(self):
 
@@ -1187,17 +1196,34 @@ def openstream(filename):
 
     lowername = filename.lower()
     if lowername.endswith(".mp3"):
-        return MP3(filename)
+        cls = MP3
     elif lowername.endswith(".mpc") or lowername.endswith('.mp+'):
-        return MPC(filename)
+        cls = MPC
     elif lowername.endswith(".ogg"):
-        return Ogg(filename)
+        cls = Ogg
     elif lowername.endswith(".opus"):
-        return Opus(filename)
+        cls = Opus
     elif (lowername.endswith(".flac") or lowername.endswith('.fla') or
           lowername.endswith('.flc')):
-        return FLAC(filename)
+        cls = FLAC
     elif lowername.endswith(".m4a"):
-        return AAC(filename)
+        cls = AAC
     else:
-        return UnknownType(filename)
+        cls = UnknownType
+
+    # Close the file as soon as it has been parsed. A directory's streams are
+    # all kept alive until the directory is summarised, and Python 2 file
+    # objects are C stdio FILEs, limited to 512 open at once on Windows; with
+    # the file left open every file past ~508 in one folder failed with
+    # "Too many open files". Construct in two steps so the handle is also
+    # released when parsing fails part way through.
+    stream = cls.__new__(cls)
+    try:
+        stream.__init__(filename)
+        if isinstance(stream, AudioType):
+            # Fill the lazily computed stream offsets while the file is open.
+            stream.stream_begin()
+            stream.stream_end()
+    finally:
+        stream.close()
+    return stream
