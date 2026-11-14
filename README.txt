@@ -96,18 +96,47 @@ the following graphical front-ends instead:
 News
 ----
 
-### Version 2.0.0 (unreleased)
+### Version 2.0.0 (Nov. 13, 2026)
 
-* Ported to Python 3 (3.8+). Python 2 is no longer supported.
+* Ported to Python 3 (3.8+). Python 2 is no longer supported. The last
+  Python 2 version is 1.0.14.
 * The cache format changed; existing caches are discarded and rebuilt on the
   first run.
 * Added `build_exe.py` for building a standalone Windows executable. This
   replaces the old py2exe build.
+* Columns are now padded by display width, so wide (CJK) characters count as
+  two columns and combining characters as none. The HTML template uses
+  monospace fonts with wide script coverage.
+* Command line parsing moved from `optparse` to `argparse`. Options behave as
+  before. `--template` lists and limits its choices, and progress is only
+  shown when stderr is a terminal.
+* Fixed Opus and Ogg Vorbis files with large tags (e.g. embedded cover art)
+  failing to be read. Their directories were listed without audio
+  information and rescanned on every run.
+* Fixed FLAC files shorter than one second (or without a recorded length)
+  failing with a division by zero.
 * Fixed directories being rescanned on every run after they changed.
 * Fixed AAC files being read in full, which made some directories slow.
 * Fixed the progress counter appearing to jump backwards.
 * Fixed the `dnuos` script always exiting with status 0.
 * Fixed audio files being left open after they were scanned.
+* Fixed crashes with the `-L` option and the `[a]` format field.
+
+### Version 1.0.14 (Nov. 13, 2026)
+
+The final Python 2 release. Fixes for Windows:
+
+* Fixed directories with more than about 500 audio files (files past the
+  limit were reported as failures).
+* Fixed audio files whose full path is 260 characters or longer being
+  silently left out of the listing.
+* Fixed the `dnuos` script always exiting with status 0, and FLAC files
+  shorter than one second failing.
+
+### Version 1.0.13 (Oct. 30, 2026)
+
+* Fixed Opus and Ogg Vorbis files with large tags (e.g. embedded cover art)
+  failing to be read.
 
 ### Version 1.0.12 (Sep. 30, 2026)
 

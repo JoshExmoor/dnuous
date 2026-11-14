@@ -101,19 +101,49 @@ des interfaces graphiques suivantes :
 Quoi de neuf
 ------------
 
-### Version 2.0.0 (pas encore publiée)
+### Version 2.0.0 (13 nov. 2026)
 
-* Porté vers Python 3 (3.8+). Python 2 n'est plus pris en charge.
+* Porté vers Python 3 (3.8+). Python 2 n'est plus pris en charge. La
+  dernière version Python 2 est la 1.0.14.
 * Le format du cache a changé ; les caches existants sont supprimés et
   reconstruits lors de la première exécution.
 * Ajouté `build_exe.py` pour construire un exécutable Windows autonome, qui
   remplace l'ancienne version py2exe.
+* Les colonnes sont maintenant alignées selon la largeur d'affichage : les
+  caractères larges (CJK) occupent deux colonnes et les caractères
+  combinants aucune. Le modèle HTML utilise des polices à chasse fixe qui
+  couvrent de nombreuses écritures.
+* L'analyse de la ligne de commande est passée d'`optparse` à `argparse`.
+  Les options se comportent comme avant. `--template` liste et limite ses
+  choix, et la progression n'est affichée que si stderr est un terminal.
+* Corrigé la lecture des fichiers Opus et Ogg Vorbis avec de gros tags (par
+  ex. une pochette intégrée). Leurs dossiers étaient listés sans
+  informations audio et analysés à chaque exécution.
+* Corrigé les fichiers FLAC de moins d'une seconde (ou sans durée
+  enregistrée) qui échouaient avec une division par zéro.
 * Corrigé les répertoires modifiés qui étaient analysés à chaque exécution.
 * Corrigé la lecture complète des fichiers AAC, qui ralentissait certains
   répertoires.
 * Corrigé le compteur de progression qui semblait reculer.
 * Corrigé le script `dnuos` qui se terminait toujours avec le code 0.
 * Corrigé les fichiers audio laissés ouverts après leur analyse.
+* Corrigé les plantages avec l'option `-L` et le champ de format `[a]`.
+
+### Version 1.0.14 (13 nov. 2026)
+
+Dernière version Python 2. Corrections pour Windows :
+
+* Corrigé les dossiers de plus d'environ 500 fichiers audio (les fichiers
+  au-delà de la limite étaient signalés comme des échecs).
+* Corrigé les fichiers audio dont le chemin complet fait 260 caractères ou
+  plus, qui étaient omis de la liste sans avertissement.
+* Corrigé le script `dnuos` qui se terminait toujours avec le code 0, et
+  les fichiers FLAC de moins d'une seconde qui échouaient.
+
+### Version 1.0.13 (30 oct. 2026)
+
+* Corrigé la lecture des fichiers Opus et Ogg Vorbis avec de gros tags (par
+  ex. une pochette intégrée).
 
 ### Version 1.0.12 (30 sep. 2026)
 

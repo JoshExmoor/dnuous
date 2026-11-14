@@ -838,12 +838,21 @@ class FLAC(AudioType):
         self.parse()
         self.samples = self.streaminfo[7]
         self.freq = self.streaminfo[4]
-        self.time = self.samples // self.freq
-        self._bitrate = self.streamsize() * 8 // self.time
+        # Whole seconds, as always. Files shorter than a second (and files
+        # that don't record their sample count or rate) have time 0, so
+        # nothing below may divide by it.
+        self.time = self.samples // self.freq if self.freq else 0
+        if self.time:
+            self._bitrate = self.streamsize() * 8 // self.time
+        elif self.samples:
+            self._bitrate = int(self.streamsize() * 8 * self.freq /
+                                self.samples)
+        else:
+            self._bitrate = 0
         self.channels = self.streaminfo[5]
         samplebits = self.streaminfo[6]
-        self.compression = self.streamsize() // (self.samples * samplebits *
-            self.channels // 8)
+        rawsize = self.samples * samplebits * self.channels // 8
+        self.compression = self.streamsize() // rawsize if rawsize else 0
         self.encoding = "%.1f%%" % self.compression
         self.brtype = "L"
 
