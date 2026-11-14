@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/JoshExmoor/dnuous"
+Homepage = "https://github.com/JoshExmoor/dnuos"
 
 [project.scripts]
 dnuos = "dnuos:cli"

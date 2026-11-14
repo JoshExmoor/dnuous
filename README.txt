@@ -40,7 +40,7 @@ older, has fewer features, and is no longer maintained.
 Download
 --------
 
-The source is available at <https://github.com/JoshExmoor/dnuous>.
+The source is available at <https://github.com/JoshExmoor/dnuos>.
 
 
 Installation/Usage
@@ -52,8 +52,8 @@ Dnuos requires Python 3.8 or newer.
 
 Get the source and install it with pip:
 
-    git clone https://github.com/JoshExmoor/dnuous.git
-    cd dnuous
+    git clone https://github.com/JoshExmoor/dnuos.git
+    cd dnuos
     python3 -m pip install .
 
 This installs a console script named `dnuos` (`dnuos.exe` on Windows) into
@@ -221,7 +221,7 @@ Development
 
 Clone the development repository using Git:
 
-    git clone https://github.com/JoshExmoor/dnuous.git
+    git clone https://github.com/JoshExmoor/dnuos.git
 
 The test data is included in `dnuostests/testdata`. Run the test suite with:
 
@@ -232,7 +232,7 @@ A `testdata` directory next to `runtests.py`, if present, is used instead.
 Visit the [GitHub repository][] if you'd like to fork the project, watch for
 new changes, or report issues.
 
-[GitHub repository]: https://github.com/JoshExmoor/dnuous
+[GitHub repository]: https://github.com/JoshExmoor/dnuos
 
 
 Contact
