@@ -106,6 +106,13 @@ Quoi de neuf
   gros tags (par ex. une pochette intégrée). Leurs dossiers
   étaient listés sans informations audio et analysés à
   chaque exécution.
+* Corrigé les dossiers de plus d'environ 500 fichiers audio
+  (Windows). Les fichiers au-delà de la limite étaient signalés
+  comme des échecs, et la taille et la durée du dossier étaient
+  trop basses.
+* Corrigé les fichiers audio dont le chemin complet fait 260
+  caractères ou plus (Windows). Ils étaient omis de la liste
+  sans avertissement.
 
 ### Version 1.0.12 (30 sep. 2026)
 

@@ -101,6 +101,11 @@ News
 * Fixed Opus and Ogg Vorbis files with large tags (e.g. embedded
   cover art) failing to be read. Their directories were listed
   without audio information and rescanned on every run.
+* Fixed directories with more than about 500 audio files (Windows).
+  Files past the limit were reported as failures, and the directory's
+  size and length came out too low.
+* Fixed audio files whose full path is 260 characters or longer
+  (Windows). They were silently left out of the listing.
 
 ### Version 1.0.12 (Sep. 30, 2026)
 
