@@ -6,5 +6,5 @@ try:
 except KeyboardInterrupt:
     if '--debug' in sys.argv:
         raise
-except SystemExit:
-    pass
+    # Conventional exit status for a process ended by Ctrl-C
+    sys.exit(130)

@@ -39,6 +39,33 @@ maintenu.
 [Oidua]: http://oidua.suxbad.com/
 
 
+État
+----
+
+La version 1.0.14 est la dernière version Python 2 de Dnuos. Python 2 n'est
+plus maintenu, et le développement continue dans la version Python 3
+(2.x, <https://github.com/JoshExmoor/dnuos>). Seule la version Python 3
+propose :
+
+* Un alignement des colonnes et un tri corrects pour les noms contenant des
+  caractères accentués, larges (CJK) ou combinants. Dans cette version, ces
+  noms peuvent être mal alignés et triés différemment.
+* Moins de limites sur les très gros dossiers (Python 3 peut ouvrir bien
+  plus de fichiers à la fois que Python 2 sous Windows).
+
+Limitations connues de cette version :
+
+* Les fichiers Apple Lossless (ALAC) en `.m4a` sont signalés comme AAC.
+* Les fichiers `.m4a` auxquels il manque certaines boîtes ne peuvent pas
+  être lus.
+* Les durées FLAC sont tronquées à la seconde.
+* Les tags ID3v2.2 ne sont pas pris en charge.
+* Les fichiers illisibles sont réessayés à chaque exécution, car les échecs
+  ne sont pas mis en cache.
+* L'exécutable Windows est en 32 bits et n'a pas de traductions (par ex. le
+  français).
+
+
 Télécharger
 -----------
 
@@ -55,8 +82,8 @@ Lancez `dnuos --help` pour des informations détaillées sur toutes les options.
 
 Extrayez l'archive et exécutez `setup.py` pour l'installer :
 
-    tar zxvf dnuos-1.0.13.tar.gz
-    cd dnuos-1.0.13
+    tar zxvf dnuos-1.0.14.tar.gz
+    cd dnuos-1.0.14
     sudo python setup.py install
 
 Cela installera un script nommé `dnuos` dans `/usr/local/bin`.
@@ -100,12 +127,10 @@ des interfaces graphiques suivantes :
 Quoi de neuf
 ------------
 
-### Version 1.0.13 (30 oct. 2026)
+### Version 1.0.14 (13 nov. 2026)
 
-* Corrigé la lecture des fichiers Opus et Ogg Vorbis avec de
-  gros tags (par ex. une pochette intégrée). Leurs dossiers
-  étaient listés sans informations audio et analysés à
-  chaque exécution.
+Cette version est la dernière de la branche Python 2. Voir « État » plus haut.
+
 * Corrigé les dossiers de plus d'environ 500 fichiers audio
   (Windows). Les fichiers au-delà de la limite étaient signalés
   comme des échecs, et la taille et la durée du dossier étaient
@@ -113,6 +138,21 @@ Quoi de neuf
 * Corrigé les fichiers audio dont le chemin complet fait 260
   caractères ou plus (Windows). Ils étaient omis de la liste
   sans avertissement.
+* Corrigé `dnuos` qui se terminait toujours avec le code 0. Les
+  erreurs d'utilisation donnent maintenant 2, et Ctrl-C donne 130.
+* Corrigé les fichiers FLAC de moins d'une seconde (ou sans durée
+  enregistrée) qui échouaient avec une division par zéro.
+* Le cache est reconstruit au premier lancement, car les dossiers
+  mis en cache par les versions précédentes pouvaient avoir des
+  fichiers manquants. L'ancien fichier de cache
+  (`dirs.1.0.9.sqlite`) peut être supprimé.
+
+### Version 1.0.13 (30 oct. 2026)
+
+* Corrigé la lecture des fichiers Opus et Ogg Vorbis avec de
+  gros tags (par ex. une pochette intégrée). Leurs dossiers
+  étaient listés sans informations audio et analysés à
+  chaque exécution.
 
 ### Version 1.0.12 (30 sep. 2026)
 

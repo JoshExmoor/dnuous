@@ -1,10 +1,20 @@
-dnuos (1.0.13-1) unstable; urgency=low
+dnuos (1.0.14-1) unstable; urgency=low
 
-  * Fixed Opus and Ogg Vorbis files with large tags failing to be read.
+  * Final release of the Python 2 version.
   * Fixed "Too many open files" failures in directories with more than
     about 500 audio files on Windows.
   * Fixed audio files with paths of 260 or more characters being
     silently skipped on Windows.
+  * Fixed the dnuos script always exiting with status 0.
+  * Fixed FLAC files shorter than one second failing with a division by
+    zero.
+  * The cache is rebuilt on first run.
+
+ -- Josh Adams <xjoshx@gmail.com>  Fri, 13 Nov 2026 00:00:00 +0000
+
+dnuos (1.0.13-1) unstable; urgency=low
+
+  * Fixed Opus and Ogg Vorbis files with large tags failing to be read.
 
  -- Josh Adams <xjoshx@gmail.com>  Fri, 30 Oct 2026 00:00:00 +0000
 

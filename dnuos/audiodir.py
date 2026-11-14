@@ -26,7 +26,7 @@ class Dir(object):
                  '_bitrates', '_lengths', '_types', 'modified', 'path',
                  '_profiles', 'sizes', '_vendors', 'years')
 
-    __version__ = '1.0.9'
+    __version__ = '1.0.14'
 
     def __init__(self, path):
         """Makes an empty Dir for path"""
